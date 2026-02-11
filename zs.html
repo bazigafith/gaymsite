@@ -1,0 +1,2031 @@
+<!doctype html>
+<html lang="en">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zombie Neighborhood Survival</title>
+  <script src="/_sdk/element_sdk.js"></script>
+  <style>
+    html, body {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: 'Courier New', monospace;
+      background: #1a1a1a;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    #gameContainer {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      background: #2d2d2d;
+      overflow: hidden;
+    }
+
+    #gameCanvas {
+      display: block;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+
+    #mainMenu {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #1a1a1a 0%, #2d1a1a 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 30;
+    }
+
+    #mainMenu h1 {
+      color: #ff0000;
+      font-size: 64px;
+      margin: 0 0 10px 0;
+      text-shadow: 0 0 20px #ff0000, 0 0 40px #ff0000;
+      letter-spacing: 4px;
+    }
+
+    #mainMenu h2 {
+      color: #ffcc00;
+      font-size: 28px;
+      margin: 0 0 50px 0;
+      font-weight: normal;
+      letter-spacing: 2px;
+    }
+
+    #startBtn {
+      padding: 20px 60px;
+      font-size: 24px;
+      font-family: 'Courier New', monospace;
+      background: #ff0000;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s;
+      box-shadow: 0 4px 20px rgba(255,0,0,0.5);
+    }
+
+    #startBtn:hover {
+      background: #cc0000;
+      transform: scale(1.1);
+      box-shadow: 0 6px 30px rgba(255,0,0,0.7);
+    }
+
+    .menuInfo {
+      color: #aaa;
+      font-size: 14px;
+      margin-top: 40px;
+      text-align: center;
+      line-height: 1.8;
+    }
+
+    .menuInfo span {
+      color: #ffcc00;
+      font-weight: bold;
+    }
+
+    #hud {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      padding: 15px 20px;
+      background: linear-gradient(180deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%);
+      color: #fff;
+      font-size: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .hudSection {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .hudItem {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(0,0,0,0.6);
+      padding: 8px 12px;
+      border-radius: 4px;
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+
+    .hudLabel {
+      color: #aaa;
+      font-size: 12px;
+    }
+
+    .hudValue {
+      color: #fff;
+      font-weight: bold;
+      font-size: 16px;
+    }
+
+    .healthBar {
+      width: 120px;
+      height: 8px;
+      background: #333;
+      border-radius: 4px;
+      overflow: hidden;
+      border: 1px solid #555;
+    }
+
+    .healthFill {
+      height: 100%;
+      background: linear-gradient(90deg, #ff0000, #ff4444);
+      transition: width 0.3s;
+    }
+
+    #message {
+      position: absolute;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.9);
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 6px;
+      border: 2px solid #ffcc00;
+      font-size: 14px;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+      z-index: 15;
+      text-align: center;
+      max-width: 80%;
+    }
+
+    #controls {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.8);
+      padding: 12px 20px;
+      border-radius: 8px;
+      color: #aaa;
+      font-size: 11px;
+      text-align: center;
+      border: 1px solid rgba(255,255,255,0.2);
+      z-index: 10;
+    }
+
+    #inventory {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      background: rgba(0,0,0,0.85);
+      padding: 15px;
+      border-radius: 8px;
+      border: 2px solid rgba(255,255,255,0.3);
+      z-index: 10;
+    }
+
+    #inventory h3 {
+      margin: 0 0 10px 0;
+      color: #ffcc00;
+      font-size: 14px;
+      text-align: center;
+    }
+
+    .inventoryGrid {
+      display: grid;
+      grid-template-columns: repeat(5, 50px);
+      gap: 8px;
+    }
+
+    .inventorySlot {
+      width: 50px;
+      height: 50px;
+      background: rgba(0,0,0,0.5);
+      border: 2px solid #444;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      transition: all 0.2s;
+    }
+
+    .inventorySlot.selected {
+      border-color: #ffcc00;
+      box-shadow: 0 0 10px rgba(255,204,0,0.5);
+    }
+
+    .inventorySlot.filled {
+      border-color: #666;
+    }
+
+    .inventorySlot .itemIcon {
+      font-size: 24px;
+    }
+
+    .inventorySlot .itemCount {
+      position: absolute;
+      bottom: 2px;
+      right: 4px;
+      color: #fff;
+      font-size: 10px;
+      font-weight: bold;
+      text-shadow: 1px 1px 2px #000;
+    }
+
+    .inventoryHint {
+      text-align: center;
+      color: #888;
+      font-size: 10px;
+      margin-top: 8px;
+    }
+
+    #gameOver {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0,0,0,0.95);
+      padding: 40px 60px;
+      border-radius: 12px;
+      border: 3px solid #ff0000;
+      text-align: center;
+      display: none;
+      z-index: 20;
+    }
+
+    #gameOver h1 {
+      color: #ff0000;
+      font-size: 48px;
+      margin: 0 0 20px 0;
+      text-shadow: 0 0 10px #ff0000;
+    }
+
+    #gameOver p {
+      color: #fff;
+      font-size: 18px;
+      margin: 10px 0;
+    }
+
+    #restartBtn {
+      margin-top: 30px;
+      padding: 15px 40px;
+      font-size: 18px;
+      font-family: 'Courier New', monospace;
+      background: #ff0000;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    #restartBtn:hover {
+      background: #cc0000;
+      transform: scale(1.05);
+    }
+
+    .ammoLow {
+      animation: pulse 1s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+  </style>
+  <style>@view-transition { navigation: auto; }</style>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+  <script src="https://cdn.tailwindcss.com" type="text/javascript"></script>
+ </head>
+ <body>
+  <div id="gameContainer">
+   <canvas id="gameCanvas"></canvas>
+   <div id="mainMenu">
+    <h1>ZOMBIE SURVIVAL</h1>
+    <h2>Neighborhood Apocalypse</h2><button id="startBtn">START GAME</button>
+    <div class="menuInfo"><span>WASD</span> to Move | <span>Mouse</span> to Aim | <span>Click</span> to Shoot<br>
+      Enter houses through doorways to find supplies<br>
+      Find the rare <span>🔧 Wrench</span> to build defensive walls!<br>
+      Survive as long as you can!
+    </div>
+   </div>
+   <div id="hud">
+    <div class="hudSection">
+     <div class="hudItem"><span class="hudLabel">HP</span>
+      <div class="healthBar">
+       <div class="healthFill" id="healthFill"></div>
+      </div><span class="hudValue" id="healthValue">100</span>
+     </div>
+     <div class="hudItem"><span class="hudLabel">��� HUNGER</span>
+      <div class="healthBar">
+       <div class="healthFill" id="hungerFill" style="background: linear-gradient(90deg, #ff8800, #ffaa44);"></div>
+      </div><span class="hudValue" id="hungerValue">100</span>
+     </div>
+     <div class="hudItem"><span class="hudLabel">💥 AMMO</span> <span class="hudValue" id="ammoValue">30</span>
+     </div>
+    </div>
+    <div class="hudSection">
+     <div class="hudItem"><span class="hudLabel">🧟 KILLS</span> <span class="hudValue" id="killsValue">0</span>
+     </div>
+     <div class="hudItem"><span class="hudLabel">🏠 SUPPLIES</span> <span class="hudValue" id="suppliesValue">0</span>
+     </div>
+    </div>
+   </div>
+   <div id="message"></div>
+   <div id="controls">
+    WASD: Move | Mouse: Aim | Click: Shoot | 1-0: Use Item | Backspace: Drop Selected | With Wrench: Click to Build Wall
+   </div>
+   <div id="inventory">
+    <h3>INVENTORY (0/10)</h3>
+    <div class="inventoryGrid" id="inventoryGrid"></div>
+    <div class="inventoryHint">
+     Press 1-0 to select &amp; use items
+    </div>
+   </div>
+   <div id="gameOver">
+    <h1>GAME OVER</h1>
+    <p>You survived <span id="finalTime">0</span> seconds</p>
+    <p>Zombies Killed: <span id="finalKills">0</span></p>
+    <p>Supplies Found: <span id="finalSupplies">0</span></p><button id="restartBtn">Restart Game</button>
+   </div>
+  </div>
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    const game = {
+      player: {
+        x: 300,
+        y: 500,
+        size: 16,
+        speed: 1.5,
+        baseSpeed: 1.5,
+        health: 100,
+        maxHealth: 100,
+        ammo: 30,
+        angle: 0,
+        speedBoostUntil: 0,
+        hunger: 100,
+        maxHunger: 100
+      },
+      camera: { x: 0, y: 0 },
+      keys: {},
+      mouse: { x: 0, y: 0, down: false },
+      zombies: [],
+      bullets: [],
+      houses: [],
+      houseGrid: {},
+      particles: [],
+      droppedItems: [],
+      playerWalls: [],
+      inventory: [{
+        type: 'blaster',
+        amount: 1,
+        icon: '🔫',
+        color: '#4a9eff'
+      }],
+      selectedSlot: 0,
+      maxInventory: 5,
+      hasBlaster: true,
+      hasWrench: false,
+      wallsRemaining: 0,
+      stats: {
+        kills: 0,
+        supplies: 0,
+        time: 0
+      },
+      running: false,
+      lastShot: 0,
+      shootCooldown: 200,
+      lastWallBuild: 0,
+      wallBuildCooldown: 500,
+      messageTimeout: null
+    };
+
+    function generateHouse(gridX, gridY) {
+      const spacing = 600;
+      const baseX = gridX * spacing;
+      const baseY = gridY * spacing;
+      
+      // 10.25% chance for special building types
+      const rand = Math.random();
+      let buildingType = 'house';
+      let baseColor = `hsl(${Math.random() * 40 + 20}, 20%, ${Math.random() * 10 + 15}%)`;
+      
+      if (rand < 0.0225) {
+        buildingType = 'hospital';
+        baseColor = '#1a2a3a'; // Dark blue-gray for hospital
+      } else if (rand < 0.045) {
+        buildingType = 'convenience';
+        baseColor = '#2a1a1a'; // Dark red-brown for convenience store
+      } else if (rand < 0.0675) {
+        buildingType = 'restaurant';
+        baseColor = '#1a2a1a'; // Dark green for restaurant
+      } else if (rand < 0.1025) {
+        buildingType = 'shop';
+        baseColor = '#1a1a2a'; // Dark blue for shop
+      }
+      
+      // Randomize building dimensions
+      const houseWidth = 300 + Math.floor(Math.random() * 200);
+      const houseHeight = 280 + Math.floor(Math.random() * 180);
+      const wallThickness = 10;
+      const doorWidth = 50;
+      
+      const house = {
+        x: baseX,
+        y: baseY,
+        gridX: gridX,
+        gridY: gridY,
+        width: houseWidth,
+        height: houseHeight,
+        doorX: baseX + houseWidth / 2,
+        doorY: baseY + houseHeight,
+        doorWidth: doorWidth,
+        wallThickness: wallThickness,
+        color: baseColor,
+        buildingType: buildingType,
+        walls: [],
+        rooms: [],
+        items: [],
+        salesman: buildingType === 'shop' ? {
+          x: baseX + houseWidth / 2,
+          y: baseY + houseHeight / 2,
+          size: 16,
+          color: '#44ff88'
+        } : null
+      };
+
+      // Outer walls with clear doorway
+      house.walls.push({x: baseX, y: baseY, width: houseWidth, height: wallThickness}); // Top wall
+      house.walls.push({x: baseX, y: baseY, width: wallThickness, height: houseHeight}); // Left wall
+      house.walls.push({x: baseX + houseWidth - wallThickness, y: baseY, width: wallThickness, height: houseHeight}); // Right wall
+      
+      // Bottom wall with doorway opening
+      const doorLeft = baseX + (houseWidth - doorWidth) / 2;
+      const doorRight = doorLeft + doorWidth;
+      house.walls.push({x: baseX, y: baseY + houseHeight - wallThickness, width: doorLeft - baseX, height: wallThickness}); // Left side of door
+      house.walls.push({x: doorRight, y: baseY + houseHeight - wallThickness, width: baseX + houseWidth - doorRight, height: wallThickness}); // Right side of door
+
+      // Create random room layout with more variety
+      const layoutType = Math.floor(Math.random() * 5);
+      
+      if (layoutType === 0) {
+        // Two rooms side by side with doorway - keep divider away from entrance
+        const dividerX = baseX + houseWidth / 2 - wallThickness / 2;
+        const doorwaySize = 60;
+        const doorwayStart = baseY + houseHeight / 2 - doorwaySize / 2;
+        
+        // Only add divider up to 80% of house height to keep entrance clear
+        house.walls.push({x: dividerX, y: baseY, width: wallThickness, height: doorwayStart - baseY}); // Top part
+        house.walls.push({x: dividerX, y: doorwayStart + doorwaySize, width: wallThickness, height: (baseY + houseHeight * 0.8) - (doorwayStart + doorwaySize)}); // Middle part only
+        
+        house.rooms.push({name: 'living', x: baseX, y: baseY, width: houseWidth / 2, height: houseHeight});
+        house.rooms.push({name: 'bedroom', x: baseX + houseWidth / 2, y: baseY, width: houseWidth / 2, height: houseHeight});
+      } else if (layoutType === 1) {
+        // Four rooms with doorways between them
+        const dividerX = baseX + houseWidth / 2 - wallThickness / 2;
+        const dividerY = baseY + houseHeight / 2 - wallThickness / 2;
+        const doorwaySize = 50;
+        
+        // Vertical divider with doorways - keep away from entrance
+        const vDoorwayTop = baseY + houseHeight / 4 - doorwaySize / 2;
+        const vDoorwayBottom = baseY + 3 * houseHeight / 4 - doorwaySize / 2;
+        house.walls.push({x: dividerX, y: baseY, width: wallThickness, height: vDoorwayTop - baseY});
+        house.walls.push({x: dividerX, y: vDoorwayTop + doorwaySize, width: wallThickness, height: vDoorwayBottom - (vDoorwayTop + doorwaySize)});
+        // Stop vertical divider at 80% to keep entrance clear
+        house.walls.push({x: dividerX, y: vDoorwayBottom + doorwaySize, width: wallThickness, height: (baseY + houseHeight * 0.8) - (vDoorwayBottom + doorwaySize)});
+        
+        // Horizontal divider with doorways
+        const hDoorwayLeft = baseX + houseWidth / 4 - doorwaySize / 2;
+        const hDoorwayRight = baseX + 3 * houseWidth / 4 - doorwaySize / 2;
+        house.walls.push({x: baseX, y: dividerY, width: hDoorwayLeft - baseX, height: wallThickness});
+        house.walls.push({x: hDoorwayLeft + doorwaySize, y: dividerY, width: hDoorwayRight - (hDoorwayLeft + doorwaySize), height: wallThickness});
+        house.walls.push({x: hDoorwayRight + doorwaySize, y: dividerY, width: baseX + houseWidth - (hDoorwayRight + doorwaySize), height: wallThickness});
+        
+        house.rooms.push({name: 'kitchen', x: baseX, y: baseY, width: houseWidth / 2, height: houseHeight / 2});
+        house.rooms.push({name: 'living', x: baseX + houseWidth / 2, y: baseY, width: houseWidth / 2, height: houseHeight / 2});
+        house.rooms.push({name: 'bedroom', x: baseX, y: baseY + houseHeight / 2, width: houseWidth / 2, height: houseHeight / 2});
+        house.rooms.push({name: 'bathroom', x: baseX + houseWidth / 2, y: baseY + houseHeight / 2, width: houseWidth / 2, height: houseHeight / 2});
+      } else if (layoutType === 2) {
+        // Three rooms with doorways - horizontal divider only, no blocking entrance
+        const dividerY = baseY + houseHeight / 2 - wallThickness / 2;
+        const doorwaySize = 60;
+        const doorwayLeft = baseX + houseWidth / 4 - doorwaySize / 2;
+        const doorwayRight = baseX + 3 * houseWidth / 4 - doorwaySize / 2;
+        
+        house.walls.push({x: baseX, y: dividerY, width: doorwayLeft - baseX, height: wallThickness});
+        house.walls.push({x: doorwayLeft + doorwaySize, y: dividerY, width: doorwayRight - (doorwayLeft + doorwaySize), height: wallThickness});
+        house.walls.push({x: doorwayRight + doorwaySize, y: dividerY, width: baseX + houseWidth - (doorwayRight + doorwaySize), height: wallThickness});
+        
+        house.rooms.push({name: 'living', x: baseX, y: baseY, width: houseWidth, height: houseHeight / 2});
+        house.rooms.push({name: 'bedroom', x: baseX, y: baseY + houseHeight / 2, width: houseWidth * 0.5, height: houseHeight / 2});
+        house.rooms.push({name: 'kitchen', x: baseX + houseWidth * 0.5, y: baseY + houseHeight / 2, width: houseWidth * 0.5, height: houseHeight / 2});
+      } else if (layoutType === 3) {
+        // L-shaped house with two rooms
+        const splitRatio = 0.6 + Math.random() * 0.2;
+        const dividerY = baseY + houseHeight * splitRatio - wallThickness / 2;
+        const doorwaySize = 60;
+        const doorwayPos = baseX + houseWidth / 2 - doorwaySize / 2;
+        
+        house.walls.push({x: baseX, y: dividerY, width: doorwayPos - baseX, height: wallThickness});
+        house.walls.push({x: doorwayPos + doorwaySize, y: dividerY, width: baseX + houseWidth - (doorwayPos + doorwaySize), height: wallThickness});
+        
+        house.rooms.push({name: 'living', x: baseX, y: baseY, width: houseWidth, height: houseHeight * splitRatio});
+        house.rooms.push({name: 'bedroom', x: baseX, y: baseY + houseHeight * splitRatio, width: houseWidth, height: houseHeight * (1 - splitRatio)});
+      } else {
+        // Three rooms asymmetric layout
+        const verticalSplit = 0.4 + Math.random() * 0.2;
+        const dividerX = baseX + houseWidth * verticalSplit - wallThickness / 2;
+        const dividerY = baseY + houseHeight * 0.5 - wallThickness / 2;
+        const doorwaySize = 50;
+        
+        // Vertical divider with doorway
+        const vDoorway = baseY + houseHeight / 2 - doorwaySize / 2;
+        house.walls.push({x: dividerX, y: baseY, width: wallThickness, height: vDoorway - baseY});
+        house.walls.push({x: dividerX, y: vDoorway + doorwaySize, width: wallThickness, height: (baseY + houseHeight * 0.8) - (vDoorway + doorwaySize)});
+        
+        // Horizontal divider on right side only
+        const hDoorway = baseX + houseWidth * verticalSplit + (houseWidth * (1 - verticalSplit)) / 2 - doorwaySize / 2;
+        house.walls.push({x: dividerX, y: dividerY, width: hDoorway - dividerX, height: wallThickness});
+        house.walls.push({x: hDoorway + doorwaySize, y: dividerY, width: baseX + houseWidth - (hDoorway + doorwaySize), height: wallThickness});
+        
+        house.rooms.push({name: 'living', x: baseX, y: baseY, width: houseWidth * verticalSplit, height: houseHeight});
+        house.rooms.push({name: 'bedroom', x: baseX + houseWidth * verticalSplit, y: baseY, width: houseWidth * (1 - verticalSplit), height: houseHeight / 2});
+        house.rooms.push({name: 'kitchen', x: baseX + houseWidth * verticalSplit, y: baseY + houseHeight / 2, width: houseWidth * (1 - verticalSplit), height: houseHeight / 2});
+      }
+
+      // Place items in rooms - different spawn rates based on building type
+      house.rooms.forEach(room => {
+        // 60% chance for each room to have any items at all
+        if (Math.random() > 0.6) return;
+        
+        const itemCount = 2 + Math.floor(Math.random() * 2); // 2-3 items max
+        for (let i = 0; i < itemCount; i++) {
+          let itemType, itemColor, itemAmount, itemIcon;
+          
+          // Different spawn rates based on building type
+          if (buildingType === 'hospital') {
+            // Hospital: 50% medkits, 30% ammo, 20% other
+            const hospRand = Math.random();
+            if (hospRand < 0.50) {
+              itemType = 'medkit';
+              itemColor = '#ff4444';
+              itemAmount = 50;
+              itemIcon = '💊';
+            } else if (hospRand < 0.80) {
+              itemType = 'ammo';
+              itemColor = '#ffcc00';
+              itemAmount = 5 + Math.floor(Math.random() * 6);
+              itemIcon = '🔫';
+            } else if (hospRand < 0.90) {
+              itemType = 'energy';
+              itemColor = '#44ff44';
+              itemAmount = 5000;
+              itemIcon = '⚡';
+            } else if (hospRand < 0.98) {
+              itemType = 'food';
+              itemColor = '#ff8800';
+              itemAmount = 40;
+              itemIcon = '🍗';
+            } else {
+              itemType = 'wrench';
+              itemColor = '#888888';
+              itemAmount = 1;
+              itemIcon = '🔧';
+            }
+          } else if (buildingType === 'convenience') {
+            // Convenience Store: 40% energy drinks, 30% food, 25% ammo, 5% other
+            const convRand = Math.random();
+            if (convRand < 0.40) {
+              itemType = 'energy';
+              itemColor = '#44ff44';
+              itemAmount = 5000;
+              itemIcon = '⚡';
+            } else if (convRand < 0.70) {
+              itemType = 'food';
+              itemColor = '#ff8800';
+              itemAmount = 40;
+              itemIcon = '🍗';
+            } else if (convRand < 0.95) {
+              itemType = 'ammo';
+              itemColor = '#ffcc00';
+              itemAmount = 5 + Math.floor(Math.random() * 6);
+              itemIcon = '🔫';
+            } else if (convRand < 0.98) {
+              itemType = 'medkit';
+              itemColor = '#ff4444';
+              itemAmount = 50;
+              itemIcon = '💊';
+            } else {
+              itemType = 'wrench';
+              itemColor = '#888888';
+              itemAmount = 1;
+              itemIcon = '🔧';
+            }
+          } else if (buildingType === 'restaurant') {
+            // Restaurant: 60% food, 30% ammo, 10% other
+            const restRand = Math.random();
+            if (restRand < 0.60) {
+              itemType = 'food';
+              itemColor = '#ff8800';
+              itemAmount = 40;
+              itemIcon = '🍗';
+            } else if (restRand < 0.90) {
+              itemType = 'ammo';
+              itemColor = '#ffcc00';
+              itemAmount = 5 + Math.floor(Math.random() * 6);
+              itemIcon = '🔫';
+            } else if (restRand < 0.95) {
+              itemType = 'energy';
+              itemColor = '#44ff44';
+              itemAmount = 5000;
+              itemIcon = '⚡';
+            } else if (restRand < 0.98) {
+              itemType = 'medkit';
+              itemColor = '#ff4444';
+              itemAmount = 50;
+              itemIcon = '💊';
+            } else {
+              itemType = 'wrench';
+              itemColor = '#888888';
+              itemAmount = 1;
+              itemIcon = '🔧';
+            }
+          } else {
+            // Regular House: 90.5% ammo, rare medkits/energy drinks/food/wrenches
+            const houseRand = Math.random();
+            if (houseRand < 0.905) {
+              itemType = 'ammo';
+              itemColor = '#ffcc00';
+              itemAmount = 5 + Math.floor(Math.random() * 6);
+              itemIcon = '🔫';
+            } else if (houseRand < 0.925) {
+              itemType = 'medkit';
+              itemColor = '#ff4444';
+              itemAmount = 50;
+              itemIcon = '💊';
+            } else if (houseRand < 0.945) {
+              itemType = 'energy';
+              itemColor = '#44ff44';
+              itemAmount = 5000;
+              itemIcon = '⚡';
+            } else if (houseRand < 0.985) {
+              itemType = 'food';
+              itemColor = '#ff8800';
+              itemAmount = 40;
+              itemIcon = '🍗';
+            } else {
+              itemType = 'wrench';
+              itemColor = '#888888';
+              itemAmount = 1;
+              itemIcon = '��';
+            }
+          }
+          
+          house.items.push({
+            x: room.x + 40 + Math.random() * (room.width - 80),
+            y: room.y + 40 + Math.random() * (room.height - 80),
+            type: itemType,
+            color: itemColor,
+            icon: itemIcon,
+            size: 8,
+            amount: itemAmount,
+            collected: false
+          });
+        }
+      });
+
+      return house;
+    }
+
+    function getOrCreateHouse(gridX, gridY) {
+      const key = `${gridX},${gridY}`;
+      
+      if (!game.houseGrid[key]) {
+        game.houseGrid[key] = generateHouse(gridX, gridY);
+      }
+      
+      return game.houseGrid[key];
+    }
+
+    function updateVisibleHouses() {
+      const spacing = 600;
+      const centerGridX = Math.floor(game.player.x / spacing);
+      const centerGridY = Math.floor(game.player.y / spacing);
+      const viewRadius = 3;
+      
+      game.houses = [];
+      
+      for (let gx = centerGridX - viewRadius; gx <= centerGridX + viewRadius; gx++) {
+        for (let gy = centerGridY - viewRadius; gy <= centerGridY + viewRadius; gy++) {
+          game.houses.push(getOrCreateHouse(gx, gy));
+        }
+      }
+    }
+
+    function checkCollision(x, y, size, rect) {
+      return x + size > rect.x &&
+             x - size < rect.x + rect.width &&
+             y + size > rect.y &&
+             y - size < rect.y + rect.height;
+    }
+
+    function canMoveTo(x, y) {
+      const size = game.player.size;
+      
+      for (const house of game.houses) {
+        if (house.walls) {
+          for (const wall of house.walls) {
+            if (checkCollision(x, y, size, wall)) {
+              return false;
+            }
+          }
+        }
+      }
+      
+      // Player can walk through their own walls - no collision check for playerWalls
+      
+      return true;
+    }
+
+    function collectNearbyItems() {
+      game.houses.forEach(house => {
+        // Check for salesman trade
+        if (house.salesman) {
+          const dx = game.player.x - house.salesman.x;
+          const dy = game.player.y - house.salesman.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          
+          if (dist < 35 && game.player.ammo >= 30 && !house.salesman.tradeCooldown) {
+            // Player is close and has enough ammo - perform trade
+            house.salesman.tradeCooldown = true;
+            setTimeout(() => { house.salesman.tradeCooldown = false; }, 1000); // 1 second cooldown between trades
+            
+            game.player.ammo -= 30;
+            
+            // Give random item
+            const randomItems = [
+              { type: 'medkit', amount: 50, icon: '��', color: '#ff4444' },
+              { type: 'energy', amount: 5000, icon: '⚡', color: '#44ff44' },
+              { type: 'food', amount: 40, icon: '🍗', color: '#ff8800' },
+              { type: 'wrench', amount: 1, icon: '🔧', color: '#888888' }
+            ];
+            
+            const reward = randomItems[Math.floor(Math.random() * randomItems.length)];
+            
+            if (game.inventory.length < game.maxInventory) {
+              game.inventory.push({
+                type: reward.type,
+                amount: reward.amount,
+                icon: reward.icon,
+                color: reward.color
+              });
+              
+              if (reward.type === 'wrench') {
+                game.hasWrench = true;
+                game.wallsRemaining += 3;
+                showMessage(`Trade complete! Received ${reward.icon} WRENCH!`);
+              } else {
+                showMessage(`Trade complete! Received ${reward.icon} ${reward.type}!`);
+              }
+              
+              createParticles(house.salesman.x, house.salesman.y, '#ffcc00', 20);
+              updateInventoryUI();
+              updateHUD();
+            } else {
+              showMessage('Inventory full! Cannot trade!');
+              game.player.ammo += 30; // Refund ammo
+            }
+          } else if (dist < 35 && game.player.ammo < 30) {
+            showMessage('Need 30 ammo to trade!');
+          }
+        }
+        
+        house.items.forEach(item => {
+          if (item.collected) return;
+          
+          const dx = game.player.x - item.x;
+          const dy = game.player.y - item.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          
+          if (dist < 25) {
+            item.collected = true;
+            
+            if (item.type === 'ammo') {
+              // Ammo goes directly to player
+              game.player.ammo += item.amount;
+              showMessage(`Found ${item.amount} ammo!`);
+              game.stats.supplies++;
+            } else {
+              // Medkits, energy drinks, and wrenches go to inventory
+              if (game.inventory.length < game.maxInventory) {
+                game.inventory.push({
+                  type: item.type,
+                  amount: item.amount,
+                  icon: item.icon,
+                  color: item.color
+                });
+                
+                if (item.type === 'wrench') {
+                  game.hasWrench = true;
+                  game.wallsRemaining = 3;
+                  showMessage(`Found rare ${item.icon} WRENCH! 3 walls available!`);
+                } else {
+                  showMessage(`Picked up ${item.icon} ${item.type}!`);
+                }
+                
+                game.stats.supplies++;
+                updateInventoryUI();
+              } else {
+                // Inventory full - don't collect
+                item.collected = false;
+                showMessage(`Inventory full! (5/5)`);
+                return;
+              }
+            }
+            
+            createParticles(item.x, item.y, item.color, 12);
+            updateHUD();
+          }
+        });
+      });
+
+      // Check for dropped items
+      game.droppedItems = game.droppedItems.filter(item => {
+        const dx = game.player.x - item.x;
+        const dy = game.player.y - item.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        
+        if (dist < 25) {
+          if (item.type === 'blaster') {
+            game.hasBlaster = true;
+            game.inventory.push({
+              type: item.type,
+              amount: item.amount,
+              icon: item.icon,
+              color: item.color
+            });
+            showMessage(`Picked up ${item.icon} blaster!`);
+            createParticles(item.x, item.y, item.color, 8);
+            updateInventoryUI();
+            return false;
+          } else if (game.inventory.length < game.maxInventory) {
+            game.inventory.push({
+              type: item.type,
+              amount: item.amount,
+              icon: item.icon,
+              color: item.color
+            });
+            
+            if (item.type === 'wrench') {
+              game.hasWrench = true;
+              game.wallsRemaining = 3;
+            }
+            
+            showMessage(`Picked up ${item.icon} ${item.type}!`);
+            createParticles(item.x, item.y, item.color, 8);
+            updateInventoryUI();
+            return false; // Remove from dropped items
+          } else {
+            showMessage(`Inventory full! (5/5)`);
+          }
+        }
+        return true; // Keep in dropped items
+      });
+    }
+
+    function spawnZombie() {
+      const angle = Math.random() * Math.PI * 2;
+      const distance = 600;
+      
+      // Randomly choose zombie type: 60% normal, 25% fast, 15% tank
+      const rand = Math.random();
+      let zombieType, size, speed, health, color;
+      
+      if (rand < 0.6) {
+        // Normal zombie
+        zombieType = 'normal';
+        size = 14;
+        speed = 1 + Math.random() * 0.5;
+        health = 2;
+        color = `hsl(${Math.random() * 60 + 80}, 60%, 40%)`;
+      } else if (rand < 0.85) {
+        // Fast zombie - smaller, faster, less health
+        zombieType = 'fast';
+        size = 10;
+        speed = 2.5 + Math.random() * 0.5;
+        health = 1;
+        color = `hsl(${Math.random() * 40 + 280}, 70%, 50%)`; // Purple/magenta
+      } else {
+        // Tank zombie - bigger, slower, much more health
+        zombieType = 'tank';
+        size = 22;
+        speed = 0.5 + Math.random() * 0.3;
+        health = 8;
+        color = `hsl(${Math.random() * 30}, 50%, 30%)`; // Dark red/brown
+      }
+      
+      game.zombies.push({
+        x: game.player.x + Math.cos(angle) * distance,
+        y: game.player.y + Math.sin(angle) * distance,
+        type: zombieType,
+        size: size,
+        speed: speed,
+        health: health,
+        maxHealth: health,
+        color: color,
+        stuckTimer: 0,
+        lastPos: { x: 0, y: 0 }
+      });
+    }
+
+    function canZombieMoveTo(x, y) {
+      const size = 14;
+      
+      for (const house of game.houses) {
+        if (house.walls) {
+          for (const wall of house.walls) {
+            if (checkCollision(x, y, size, wall)) {
+              return false;
+            }
+          }
+        }
+      }
+      
+      // Check player walls
+      for (const wall of game.playerWalls) {
+        if (checkCollision(x, y, size, wall)) {
+          return false;
+        }
+      }
+      
+      return true;
+    }
+
+    function findPathAroundWall(zombie) {
+      const dx = game.player.x - zombie.x;
+      const dy = game.player.y - zombie.y;
+      const angle = Math.atan2(dy, dx);
+      
+      // Try the direct path first
+      const directX = zombie.x + Math.cos(angle) * zombie.speed;
+      const directY = zombie.y + Math.sin(angle) * zombie.speed;
+      if (canZombieMoveTo(directX, directY)) {
+        return { x: directX, y: directY };
+      }
+      
+      // Try angled paths (left and right of direct path)
+      const angles = [
+        angle + Math.PI / 4,
+        angle - Math.PI / 4,
+        angle + Math.PI / 2,
+        angle - Math.PI / 2,
+        angle + 3 * Math.PI / 4,
+        angle - 3 * Math.PI / 4
+      ];
+      
+      for (const tryAngle of angles) {
+        const tryX = zombie.x + Math.cos(tryAngle) * zombie.speed;
+        const tryY = zombie.y + Math.sin(tryAngle) * zombie.speed;
+        if (canZombieMoveTo(tryX, tryY)) {
+          return { x: tryX, y: tryY };
+        }
+      }
+      
+      // If stuck, try backing up
+      if (zombie.stuckTimer > 30) {
+        const backX = zombie.x + Math.cos(angle + Math.PI) * zombie.speed;
+        const backY = zombie.y + Math.sin(angle + Math.PI) * zombie.speed;
+        if (canZombieMoveTo(backX, backY)) {
+          zombie.stuckTimer = 0;
+          return { x: backX, y: backY };
+        }
+      }
+      
+      return { x: zombie.x, y: zombie.y };
+    }
+
+    function shoot() {
+      const now = Date.now();
+      if (now - game.lastShot < game.shootCooldown || game.player.ammo <= 0 || !game.hasBlaster) return;
+      
+      game.lastShot = now;
+      game.player.ammo--;
+      
+      const dx = game.mouse.x - canvas.width / 2;
+      const dy = game.mouse.y - canvas.height / 2;
+      const angle = Math.atan2(dy, dx);
+      
+      game.bullets.push({
+        x: game.player.x,
+        y: game.player.y,
+        vx: Math.cos(angle) * 25,
+        vy: Math.sin(angle) * 25,
+        size: 4,
+        life: 100
+      });
+
+      updateHUD();
+    }
+
+    function buildWall() {
+      const now = Date.now();
+      if (now - game.lastWallBuild < game.wallBuildCooldown || !game.hasWrench) return;
+      
+      if (game.wallsRemaining <= 0) {
+        showMessage('No wall charges left! 🔧');
+        return;
+      }
+      
+      game.lastWallBuild = now;
+      game.wallsRemaining--;
+      
+      // Build wall in front of player
+      const distance = 40;
+      const wallX = game.player.x + Math.cos(game.player.angle) * distance;
+      const wallY = game.player.y + Math.sin(game.player.angle) * distance;
+      
+      const wallWidth = 60;
+      const wallHeight = 10;
+      
+      game.playerWalls.push({
+        x: wallX - wallWidth / 2,
+        y: wallY - wallHeight / 2,
+        width: wallWidth,
+        height: wallHeight,
+        health: 20,
+        maxHealth: 20
+      });
+      
+      if (game.wallsRemaining > 0) {
+        showMessage(`Wall built! ${game.wallsRemaining} charges left ���`);
+      } else {
+        showMessage('Last wall built! Wrench depleted 🔧');
+        // Remove wrench from inventory
+        game.inventory = game.inventory.filter(item => item.type !== 'wrench');
+        game.hasWrench = false;
+        updateInventoryUI();
+      }
+      
+      createParticles(wallX, wallY, '#888888', 8);
+    }
+
+    function createParticles(x, y, color, count = 8) {
+      for (let i = 0; i < count; i++) {
+        const angle = (Math.PI * 2 * i) / count;
+        game.particles.push({
+          x, y,
+          vx: Math.cos(angle) * (2 + Math.random() * 2),
+          vy: Math.sin(angle) * (2 + Math.random() * 2),
+          size: 3 + Math.random() * 3,
+          color,
+          life: 30 + Math.random() * 20
+        });
+      }
+    }
+
+    function showMessage(text) {
+      const msgEl = document.getElementById('message');
+      msgEl.textContent = text;
+      msgEl.style.opacity = '1';
+      
+      if (game.messageTimeout) clearTimeout(game.messageTimeout);
+      game.messageTimeout = setTimeout(() => {
+        msgEl.style.opacity = '0';
+      }, 2000);
+    }
+
+    function updateInventoryUI() {
+      const grid = document.getElementById('inventoryGrid');
+      const title = document.querySelector('#inventory h3');
+      
+      title.textContent = `INVENTORY (${game.inventory.length}/${game.maxInventory})`;
+      
+      grid.innerHTML = '';
+      
+      for (let i = 0; i < game.maxInventory; i++) {
+        const slot = document.createElement('div');
+        slot.className = 'inventorySlot';
+        
+        if (i === game.selectedSlot) {
+          slot.classList.add('selected');
+        }
+        
+        if (i < game.inventory.length) {
+          slot.classList.add('filled');
+          const item = game.inventory[i];
+          
+          const icon = document.createElement('div');
+          icon.className = 'itemIcon';
+          icon.textContent = item.icon;
+          slot.appendChild(icon);
+        }
+        
+        grid.appendChild(slot);
+      }
+    }
+
+    function useItem(index) {
+      if (index < 0 || index >= game.inventory.length) return;
+      
+      const item = game.inventory[index];
+      
+      if (item.type === 'blaster') {
+        showMessage('Blaster equipped and ready!');
+        return; // Don't remove blaster from inventory
+      } else if (item.type === 'wrench') {
+        showMessage(`Wrench equipped! ${game.wallsRemaining} walls remaining!`);
+        return; // Don't remove wrench from inventory
+      } else if (item.type === 'medkit') {
+        const healAmount = Math.min(item.amount, game.player.maxHealth - game.player.health);
+        game.player.health += healAmount;
+        showMessage(`Used medkit! +${healAmount} HP`);
+        createParticles(game.player.x, game.player.y, '#ff4444', 15);
+      } else if (item.type === 'energy') {
+        game.player.speedBoostUntil = Date.now() + item.amount;
+        game.player.speed = game.player.baseSpeed * 2;
+        showMessage(`Energy boost! Speed x2 for 5s`);
+        createParticles(game.player.x, game.player.y, '#44ff44', 15);
+      } else if (item.type === 'food') {
+        const hungerRestored = Math.min(item.amount, game.player.maxHunger - game.player.hunger);
+        game.player.hunger += hungerRestored;
+        showMessage(`Ate food! +${hungerRestored} hunger`);
+        createParticles(game.player.x, game.player.y, '#ff8800', 15);
+      }
+      
+      game.inventory.splice(index, 1);
+      
+      if (game.selectedSlot >= game.inventory.length && game.inventory.length > 0) {
+        game.selectedSlot = game.inventory.length - 1;
+      }
+      
+      updateInventoryUI();
+      updateHUD();
+    }
+
+    function dropItem() {
+      if (game.inventory.length === 0) {
+        showMessage('No items to drop!');
+        return;
+      }
+      
+      const index = game.selectedSlot;
+      if (index >= game.inventory.length) return;
+      
+      const item = game.inventory[index];
+      
+      const dropAngle = Math.random() * Math.PI * 2;
+      const dropDist = 40;
+      
+      game.droppedItems.push({
+        x: game.player.x + Math.cos(dropAngle) * dropDist,
+        y: game.player.y + Math.sin(dropAngle) * dropDist,
+        type: item.type,
+        amount: item.amount,
+        icon: item.icon,
+        color: item.color,
+        size: 8
+      });
+      
+      if (item.type === 'blaster') {
+        game.hasBlaster = false;
+      } else if (item.type === 'wrench') {
+        game.hasWrench = false;
+      }
+      
+      game.inventory.splice(index, 1);
+      
+      if (game.selectedSlot >= game.inventory.length && game.inventory.length > 0) {
+        game.selectedSlot = game.inventory.length - 1;
+      }
+      
+      showMessage(`Dropped ${item.icon} ${item.type}`);
+      updateInventoryUI();
+    }
+
+    function update() {
+      if (!game.running) return;
+
+      // Hunger system - decreases slowly over time
+      game.player.hunger -= 0.02; // Loses ~1 hunger per second at 60fps
+      if (game.player.hunger < 0) {
+        game.player.hunger = 0;
+        // When hunger hits 0, start losing health
+        game.player.health -= 0.1; // Loses ~5 HP per second when starving
+        updateHUD(); // Update HUD when taking hunger damage
+        if (game.player.health <= 0) {
+          gameOver();
+        }
+      }
+      
+      // Also update HUD periodically to keep it in sync
+      updateHUD();
+
+      // Check if speed boost expired
+      if (game.player.speedBoostUntil > 0 && Date.now() > game.player.speedBoostUntil) {
+        game.player.speed = game.player.baseSpeed;
+        game.player.speedBoostUntil = 0;
+        showMessage('Speed boost ended');
+      }
+
+      let dx = 0, dy = 0;
+      if (game.keys['w'] || game.keys['W']) dy -= 1;
+      if (game.keys['s'] || game.keys['S']) dy += 1;
+      if (game.keys['a'] || game.keys['A']) dx -= 1;
+      if (game.keys['d'] || game.keys['D']) dx += 1;
+      
+      if (dx !== 0 && dy !== 0) {
+        dx *= 0.707;
+        dy *= 0.707;
+      }
+      
+      const moveSpeed = game.player.speed;
+      const newX = game.player.x + dx * moveSpeed;
+      const newY = game.player.y + dy * moveSpeed;
+      
+      if (canMoveTo(newX, newY)) {
+        game.player.x = newX;
+        game.player.y = newY;
+      } else {
+        if (canMoveTo(newX, game.player.y)) {
+          game.player.x = newX;
+        }
+        if (canMoveTo(game.player.x, newY)) {
+          game.player.y = newY;
+        }
+      }
+      
+      game.camera.x = game.player.x - canvas.width / 2;
+      game.camera.y = game.player.y - canvas.height / 2;
+
+      updateVisibleHouses();
+
+      const mdx = game.mouse.x - canvas.width / 2;
+      const mdy = game.mouse.y - canvas.height / 2;
+      game.player.angle = Math.atan2(mdy, mdx);
+
+      collectNearbyItems();
+
+      game.bullets = game.bullets.filter(bullet => {
+        bullet.x += bullet.vx;
+        bullet.y += bullet.vy;
+        bullet.life--;
+        
+        // Check if bullet hit a wall
+        const bulletSize = 4;
+        for (const house of game.houses) {
+          if (house.walls) {
+            for (const wall of house.walls) {
+              if (checkCollision(bullet.x, bullet.y, bulletSize, wall)) {
+                return false; // Remove bullet
+              }
+            }
+          }
+        }
+        
+        // Check if bullet hit player wall
+        for (const wall of game.playerWalls) {
+          if (checkCollision(bullet.x, bullet.y, bulletSize, wall)) {
+            return false;
+          }
+        }
+        
+        return bullet.life > 0;
+      });
+
+      game.zombies.forEach(zombie => {
+        // Track if zombie is stuck
+        const distMoved = Math.sqrt(
+          Math.pow(zombie.x - zombie.lastPos.x, 2) + 
+          Math.pow(zombie.y - zombie.lastPos.y, 2)
+        );
+        
+        if (distMoved < 0.1) {
+          zombie.stuckTimer++;
+        } else {
+          zombie.stuckTimer = Math.max(0, zombie.stuckTimer - 1);
+        }
+        
+        zombie.lastPos.x = zombie.x;
+        zombie.lastPos.y = zombie.y;
+        
+        // Use pathfinding to navigate around walls
+        const newPos = findPathAroundWall(zombie);
+        
+        // Check collision with player before moving
+        const dx = game.player.x - newPos.x;
+        const dy = game.player.y - newPos.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const minDist = zombie.size + game.player.size;
+        
+        if (dist < minDist) {
+          // Push zombie back to not overlap with player
+          const angle = Math.atan2(dy, dx);
+          zombie.x = game.player.x - Math.cos(angle) * minDist;
+          zombie.y = game.player.y - Math.sin(angle) * minDist;
+          
+          // Deal damage when touching
+          game.player.health -= 0.2;
+          if (game.player.health <= 0) {
+            gameOver();
+          }
+          updateHUD();
+        } else {
+          // Safe to move
+          zombie.x = newPos.x;
+          zombie.y = newPos.y;
+        }
+      });
+
+      // Zombies attack player walls
+      game.playerWalls = game.playerWalls.filter(wall => {
+        game.zombies.forEach(zombie => {
+          const dx = (wall.x + wall.width / 2) - zombie.x;
+          const dy = (wall.y + wall.height / 2) - zombie.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          
+          if (dist < zombie.size + 20) {
+            wall.health -= 0.05;
+          }
+        });
+        
+        if (wall.health <= 0) {
+          createParticles(wall.x + wall.width / 2, wall.y + wall.height / 2, '#888888', 10);
+          return false;
+        }
+        return true;
+      });
+
+      game.bullets.forEach(bullet => {
+        game.zombies.forEach((zombie, zIndex) => {
+          const dx = bullet.x - zombie.x;
+          const dy = bullet.y - zombie.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          
+          if (dist < zombie.size) {
+            zombie.health--;
+            bullet.life = 0;
+            
+            if (zombie.health <= 0) {
+              const zombieX = zombie.x;
+              const zombieY = zombie.y;
+              const zombieColor = zombie.color;
+              
+              game.zombies.splice(zIndex, 1);
+              game.stats.kills++;
+              createParticles(zombieX, zombieY, zombieColor, 10);
+              
+              // 7.69% chance (1 in 13) to drop food when zombie dies
+              if (Math.random() < 0.0769) {
+                game.droppedItems.push({
+                  x: zombieX,
+                  y: zombieY,
+                  type: 'food',
+                  amount: 40,
+                  icon: '🍗',
+                  color: '#ff8800',
+                  size: 8
+                });
+              }
+              
+              updateHUD();
+            }
+          }
+        });
+      });
+
+      game.particles = game.particles.filter(p => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vx *= 0.95;
+        p.vy *= 0.95;
+        p.life--;
+        return p.life > 0;
+      });
+
+      if (Math.random() < 0.02 && game.zombies.length < 30) {
+        spawnZombie();
+      }
+
+      game.stats.time = Date.now() - game.startTime;
+    }
+
+    function isPlayerInHouse() {
+      for (const house of game.houses) {
+        if (game.player.x > house.x && game.player.x < house.x + house.width &&
+            game.player.y > house.y && game.player.y < house.y + house.height) {
+          return house;
+        }
+      }
+      return null;
+    }
+
+    function getPlayerRoom(house) {
+      if (!house) return null;
+      
+      for (const room of house.rooms) {
+        if (game.player.x > room.x && game.player.x < room.x + room.width &&
+            game.player.y > room.y && game.player.y < room.y + room.height) {
+          return room;
+        }
+      }
+      return null;
+    }
+
+    function render() {
+      ctx.fillStyle = '#0a0a0a';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.save();
+      ctx.translate(-game.camera.x, -game.camera.y);
+
+      // Draw infinite grass pattern
+      const startX = Math.floor(game.camera.x / 200) * 200;
+      const startY = Math.floor(game.camera.y / 200) * 200;
+      const endX = startX + canvas.width + 400;
+      const endY = startY + canvas.height + 400;
+      
+      ctx.fillStyle = '#0f1f0f';
+      for (let x = startX; x < endX; x += 50) {
+        for (let y = startY; y < endY; y += 50) {
+          if ((x + y) % 100 === 0) {
+            ctx.fillRect(x, y, 4, 4);
+          }
+        }
+      }
+
+      // Draw infinite road grid
+      const roadWidth = 100;
+      const spacing = 600;
+      
+      const startGridX = Math.floor((game.camera.x - 200) / spacing);
+      const endGridX = Math.ceil((game.camera.x + canvas.width + 200) / spacing);
+      const startGridY = Math.floor((game.camera.y - 200) / spacing);
+      const endGridY = Math.ceil((game.camera.y + canvas.height + 200) / spacing);
+      
+      ctx.fillStyle = '#050505';
+      for (let gx = startGridX; gx <= endGridX; gx++) {
+        const roadX = gx * spacing - roadWidth / 2;
+        ctx.fillRect(roadX, game.camera.y - 200, roadWidth, canvas.height + 400);
+      }
+      
+      for (let gy = startGridY; gy <= endGridY; gy++) {
+        const roadY = gy * spacing - roadWidth / 2;
+        ctx.fillRect(game.camera.x - 200, roadY, canvas.width + 400, roadWidth);
+      }
+      
+      // Draw road lines
+      ctx.strokeStyle = '#ffcc00';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([20, 20]);
+      
+      for (let gx = startGridX; gx <= endGridX; gx++) {
+        const roadX = gx * spacing;
+        ctx.beginPath();
+        ctx.moveTo(roadX, game.camera.y - 200);
+        ctx.lineTo(roadX, game.camera.y + canvas.height + 200);
+        ctx.stroke();
+      }
+      
+      for (let gy = startGridY; gy <= endGridY; gy++) {
+        const roadY = gy * spacing;
+        ctx.beginPath();
+        ctx.moveTo(game.camera.x - 200, roadY);
+        ctx.lineTo(game.camera.x + canvas.width + 200, roadY);
+        ctx.stroke();
+      }
+      ctx.setLineDash([]);
+
+      const currentPlayerHouse = isPlayerInHouse();
+      
+      game.houses.forEach(house => {
+        const isPlayerInThisHouse = currentPlayerHouse && currentPlayerHouse === house;
+        
+        ctx.fillStyle = house.color;
+        ctx.fillRect(house.x, house.y, house.width, house.height);
+        
+        // Draw building type label if special building
+        if (house.buildingType !== 'house') {
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+          ctx.fillRect(house.x + 10, house.y + 10, 150, 30);
+          
+          ctx.fillStyle = '#ffffff';
+          ctx.font = 'bold 14px monospace';
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'top';
+          
+          let label = '';
+          if (house.buildingType === 'hospital') {
+            label = '🏥 HOSPITAL';
+          } else if (house.buildingType === 'convenience') {
+            label = '🏪 STORE';
+          } else if (house.buildingType === 'restaurant') {
+            label = '🍽️ RESTAURANT';
+          } else if (house.buildingType === 'shop') {
+            label = '🛒 SHOP';
+          }
+          
+          ctx.fillText(label, house.x + 15, house.y + 18);
+        }
+        
+        // Only draw interior details if player is inside this house
+        if (isPlayerInThisHouse) {
+          // Draw room dividers
+          ctx.strokeStyle = '#000';
+          ctx.lineWidth = 3;
+          house.walls.forEach(wall => {
+            ctx.strokeRect(wall.x, wall.y, wall.width, wall.height);
+          });
+          
+          // Draw items
+          house.items.forEach(item => {
+            if (item.collected) return;
+            
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = item.color;
+            ctx.fillStyle = item.color;
+            ctx.beginPath();
+            ctx.arc(item.x, item.y, item.size, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            
+            ctx.fillStyle = '#000';
+            ctx.font = 'bold 10px monospace';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(item.icon, item.x, item.y);
+          });
+          
+          // Draw salesman NPC if this is a shop
+          if (house.salesman) {
+            const salesman = house.salesman;
+            
+            // Draw body
+            ctx.fillStyle = salesman.color;
+            ctx.beginPath();
+            ctx.arc(salesman.x, salesman.y, salesman.size, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Draw eyes
+            ctx.fillStyle = '#000';
+            ctx.beginPath();
+            ctx.arc(salesman.x - 5, salesman.y - 3, 2, 0, Math.PI * 2);
+            ctx.arc(salesman.x + 5, salesman.y - 3, 2, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Draw smile
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(salesman.x, salesman.y + 2, 6, 0, Math.PI);
+            ctx.stroke();
+            
+            // Draw name label
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+            ctx.fillRect(salesman.x - 35, salesman.y - salesman.size - 20, 70, 16);
+            
+            ctx.fillStyle = '#ffcc00';
+            ctx.font = 'bold 10px monospace';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('SALESMAN', salesman.x, salesman.y - salesman.size - 12);
+            
+            // Draw trade info
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+            ctx.fillRect(salesman.x - 45, salesman.y + salesman.size + 8, 90, 16);
+            
+            ctx.fillStyle = '#fff';
+            ctx.font = '9px monospace';
+            ctx.fillText('30 ammo → item', salesman.x, salesman.y + salesman.size + 16);
+          }
+        }
+        
+        // Always draw outer border
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(house.x, house.y, house.width, house.height);
+        
+        // Always draw door
+        const doorLeft = house.doorX - house.doorWidth / 2;
+        ctx.fillStyle = '#8b4513';
+        ctx.fillRect(doorLeft, house.doorY - 12, house.doorWidth, 12);
+      });
+
+      // Draw player walls
+      game.playerWalls.forEach(wall => {
+        const healthPercent = wall.health / wall.maxHealth;
+        
+        // Wall color based on health
+        const r = Math.floor(136 * healthPercent);
+        const g = Math.floor(136 * healthPercent);
+        const b = Math.floor(136 * healthPercent);
+        ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+        ctx.fillRect(wall.x, wall.y, wall.width, wall.height);
+        
+        // Border
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(wall.x, wall.y, wall.width, wall.height);
+        
+        // Health bar
+        const barWidth = wall.width;
+        const barHeight = 3;
+        const barX = wall.x;
+        const barY = wall.y - 6;
+        
+        ctx.fillStyle = '#000';
+        ctx.fillRect(barX, barY, barWidth, barHeight);
+        
+        ctx.fillStyle = '#888888';
+        ctx.fillRect(barX, barY, barWidth * healthPercent, barHeight);
+      });
+
+      // Draw dropped items on ground
+      game.droppedItems.forEach(item => {
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = item.color;
+        ctx.fillStyle = item.color;
+        ctx.beginPath();
+        ctx.arc(item.x, item.y, item.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 12px monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(item.icon, item.x, item.y);
+      });
+
+      game.zombies.forEach(zombie => {
+        // Check if zombie is in any house
+        let zombieInHouse = null;
+        for (const house of game.houses) {
+          if (zombie.x > house.x && zombie.x < house.x + house.width &&
+              zombie.y > house.y && zombie.y < house.y + house.height) {
+            zombieInHouse = house;
+            break;
+          }
+        }
+        
+        // Draw zombie only if:
+        // 1. Player is outside AND zombie is outside (both not in houses)
+        // 2. Player is inside AND zombie is in the SAME house
+        let shouldDrawZombie = false;
+        
+        if (!currentPlayerHouse && !zombieInHouse) {
+          // Both outside
+          shouldDrawZombie = true;
+        } else if (currentPlayerHouse && zombieInHouse && currentPlayerHouse === zombieInHouse) {
+          // Both in same house
+          shouldDrawZombie = true;
+        }
+        // If player is outside and zombie is inside ANY house, don't draw
+        // If player is inside and zombie is outside, don't draw
+        // If player is inside and zombie is in DIFFERENT house, don't draw
+        
+        if (shouldDrawZombie) {
+          ctx.fillStyle = zombie.color;
+          ctx.beginPath();
+          ctx.arc(zombie.x, zombie.y, zombie.size, 0, Math.PI * 2);
+          ctx.fill();
+          
+          // Draw eyes scaled to zombie size
+          const eyeSize = zombie.size / 7;
+          const eyeOffset = zombie.size / 3.5;
+          const eyeY = -zombie.size / 4;
+          
+          ctx.fillStyle = '#000';
+          ctx.beginPath();
+          ctx.arc(zombie.x - eyeOffset, zombie.y + eyeY, eyeSize, 0, Math.PI * 2);
+          ctx.arc(zombie.x + eyeOffset, zombie.y + eyeY, eyeSize, 0, Math.PI * 2);
+          ctx.fill();
+          
+          // Draw mouth
+          ctx.strokeStyle = '#000';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.arc(zombie.x, zombie.y + zombie.size / 5, zombie.size / 3.5, 0, Math.PI);
+          ctx.stroke();
+          
+          // Draw health bar for tank zombies
+          if (zombie.type === 'tank') {
+            const barWidth = zombie.size * 2;
+            const barHeight = 4;
+            const barX = zombie.x - barWidth / 2;
+            const barY = zombie.y - zombie.size - 8;
+            
+            ctx.fillStyle = '#000';
+            ctx.fillRect(barX, barY, barWidth, barHeight);
+            
+            ctx.fillStyle = '#ff0000';
+            const healthPercent = zombie.health / zombie.maxHealth;
+            ctx.fillRect(barX, barY, barWidth * healthPercent, barHeight);
+          }
+          
+          // Add speed trail for fast zombies
+          if (zombie.type === 'fast') {
+            ctx.globalAlpha = 0.3;
+            ctx.fillStyle = zombie.color;
+            ctx.beginPath();
+            ctx.arc(zombie.x - 8, zombie.y, zombie.size * 0.8, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+          }
+        }
+      });
+
+      ctx.fillStyle = '#ffcc00';
+      game.bullets.forEach(bullet => {
+        ctx.beginPath();
+        ctx.arc(bullet.x, bullet.y, bullet.size, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      game.particles.forEach(p => {
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = p.life / 30;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.globalAlpha = 1;
+
+      ctx.fillStyle = '#4a9eff';
+      ctx.beginPath();
+      ctx.arc(game.player.x, game.player.y, game.player.size, 0, Math.PI * 2);
+      ctx.fill();
+      
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(game.player.x, game.player.y);
+      ctx.lineTo(
+        game.player.x + Math.cos(game.player.angle) * 20,
+        game.player.y + Math.sin(game.player.angle) * 20
+      );
+      ctx.stroke();
+
+      ctx.restore();
+
+      // Apply lighting effects
+      const playerHouse = isPlayerInHouse();
+      const playerRoom = getPlayerRoom(playerHouse);
+
+      ctx.save();
+      
+      if (playerHouse && playerRoom) {
+        // Inside a house - darken everything except current room
+        // First create the darkness overlay
+        const darknessCanvas = document.createElement('canvas');
+        darknessCanvas.width = canvas.width;
+        darknessCanvas.height = canvas.height;
+        const darkCtx = darknessCanvas.getContext('2d');
+        
+        // Fill entire screen with darkness
+        darkCtx.fillStyle = 'rgba(0, 0, 0, 0.9)';
+        darkCtx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Cut out the current room to make it visible
+        darkCtx.globalCompositeOperation = 'destination-out';
+        const roomScreenX = playerRoom.x - game.camera.x;
+        const roomScreenY = playerRoom.y - game.camera.y;
+        
+        // Create a gradient that fades from fully transparent in the room to dark at edges
+        const roomGradient = darkCtx.createRadialGradient(
+          roomScreenX + playerRoom.width / 2,
+          roomScreenY + playerRoom.height / 2,
+          Math.min(playerRoom.width, playerRoom.height) * 0.4,
+          roomScreenX + playerRoom.width / 2,
+          roomScreenY + playerRoom.height / 2,
+          Math.max(playerRoom.width, playerRoom.height) * 0.7
+        );
+        roomGradient.addColorStop(0, 'rgba(0, 0, 0, 1)');
+        roomGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        
+        darkCtx.fillStyle = roomGradient;
+        darkCtx.fillRect(roomScreenX - 100, roomScreenY - 100, playerRoom.width + 200, playerRoom.height + 200);
+        
+        // Draw the darkness overlay onto main canvas
+        darkCtx.globalCompositeOperation = 'source-over';
+        ctx.drawImage(darknessCanvas, 0, 0);
+      } else {
+        // Outside - add darker overlay
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Add vignette effect
+        const vignetteGradient = ctx.createRadialGradient(
+          canvas.width / 2, canvas.height / 2, canvas.height * 0.2,
+          canvas.width / 2, canvas.height / 2, canvas.height * 0.7
+        );
+        vignetteGradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
+        vignetteGradient.addColorStop(1, 'rgba(0, 0, 0, 0.8)');
+        ctx.fillStyle = vignetteGradient;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+      
+      ctx.restore();
+    }
+
+    function updateHUD() {
+      document.getElementById('healthValue').textContent = Math.max(0, Math.floor(game.player.health));
+      document.getElementById('healthFill').style.width = Math.max(0, (game.player.health / game.player.maxHealth) * 100) + '%';
+      
+      document.getElementById('hungerValue').textContent = Math.max(0, Math.floor(game.player.hunger));
+      document.getElementById('hungerFill').style.width = Math.max(0, (game.player.hunger / game.player.maxHunger) * 100) + '%';
+      
+      const hungerEl = document.getElementById('hungerValue');
+      if (game.player.hunger < 20) {
+        hungerEl.parentElement.classList.add('ammoLow');
+      } else {
+        hungerEl.parentElement.classList.remove('ammoLow');
+      }
+      
+      const ammoEl = document.getElementById('ammoValue');
+      ammoEl.textContent = game.player.ammo;
+      if (game.player.ammo < 5) {
+        ammoEl.parentElement.classList.add('ammoLow');
+      } else {
+        ammoEl.parentElement.classList.remove('ammoLow');
+      }
+      
+      document.getElementById('killsValue').textContent = game.stats.kills;
+      document.getElementById('suppliesValue').textContent = game.stats.supplies;
+    }
+
+    function gameOver() {
+      game.running = false;
+      const finalTime = Math.floor(game.stats.time / 1000);
+      document.getElementById('finalTime').textContent = finalTime;
+      document.getElementById('finalKills').textContent = game.stats.kills;
+      document.getElementById('finalSupplies').textContent = game.stats.supplies;
+      document.getElementById('gameOver').style.display = 'block';
+    }
+
+    function startGame() {
+      document.getElementById('mainMenu').style.display = 'none';
+      game.running = true;
+      game.startTime = Date.now();
+      
+      game.mouse.x = canvas.width / 2;
+      game.mouse.y = canvas.height / 2;
+    }
+
+    function restartGame() {
+      game.player = {
+        x: 300,
+        y: 500,
+        size: 16,
+        speed: 1.5,
+        baseSpeed: 1.5,
+        health: 100,
+        maxHealth: 100,
+        ammo: 30,
+        angle: 0,
+        speedBoostUntil: 0,
+        hunger: 100,
+        maxHunger: 100
+      };
+      game.zombies = [];
+      game.bullets = [];
+      game.houses = [];
+      game.houseGrid = {};
+      game.particles = [];
+      game.droppedItems = [];
+      game.playerWalls = [];
+      game.inventory = [{
+        type: 'blaster',
+        amount: 1,
+        icon: '🔫',
+        color: '#4a9eff'
+      }];
+      game.selectedSlot = 0;
+      game.hasBlaster = true;
+      game.hasWrench = false;
+      game.wallsRemaining = 0;
+      game.stats = { kills: 0, supplies: 0, time: 0 };
+      game.running = true;
+      game.startTime = Date.now();
+      
+      updateVisibleHouses();
+      updateHUD();
+      updateInventoryUI();
+      document.getElementById('gameOver').style.display = 'none';
+    }
+
+    window.addEventListener('keydown', e => {
+      game.keys[e.key] = true;
+      
+      // Number keys 1-0 for selecting and using items
+      if (e.key >= '1' && e.key <= '9') {
+        const index = parseInt(e.key) - 1;
+        game.selectedSlot = index;
+        updateInventoryUI();
+        useItem(index);
+      } else if (e.key === '0') {
+        game.selectedSlot = 9;
+        updateInventoryUI();
+        useItem(9);
+      }
+      
+      // Backspace to drop item
+      if (e.key === 'Backspace') {
+        e.preventDefault();
+        dropItem();
+      }
+    });
+
+    window.addEventListener('keyup', e => {
+      game.keys[e.key] = false;
+    });
+
+    canvas.addEventListener('mousemove', e => {
+      const rect = canvas.getBoundingClientRect();
+      game.mouse.x = e.clientX - rect.left;
+      game.mouse.y = e.clientY - rect.top;
+    });
+
+    canvas.addEventListener('mousedown', e => {
+      e.preventDefault();
+      game.mouse.down = true;
+      
+      if (game.hasWrench) {
+        buildWall();
+      } else if (game.hasBlaster) {
+        shoot();
+      }
+    });
+
+    canvas.addEventListener('mouseup', () => {
+      game.mouse.down = false;
+    });
+
+    document.getElementById('startBtn').addEventListener('click', startGame);
+    document.getElementById('restartBtn').addEventListener('click', restartGame);
+
+    function gameLoop() {
+      update();
+      render();
+      requestAnimationFrame(gameLoop);
+    }
+
+    updateVisibleHouses();
+    updateHUD();
+    updateInventoryUI();
+    gameLoop();
+
+    const defaultConfig = {};
+    
+    async function onConfigChange(config) {
+    }
+
+    function mapToCapabilities(config) {
+      return {
+        recolorables: [],
+        borderables: [],
+        fontEditable: undefined,
+        fontSizeable: undefined
+      };
+    }
+
+    function mapToEditPanelValues(config) {
+      return new Map();
+    }
+
+    if (window.elementSdk) {
+      window.elementSdk.init({
+        defaultConfig,
+        onConfigChange,
+        mapToCapabilities,
+        mapToEditPanelValues
+      });
+    }
+  </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9cb6bf0b240df04e',t:'MTc3MDY3NTU0NS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
