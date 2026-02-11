@@ -1,0 +1,1460 @@
+<!doctype html>
+<html lang="en">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Deck Builder Roguelike</title>
+  <script src="/_sdk/element_sdk.js"></script>
+  <script src="/_sdk/data_sdk.js"></script>
+  <style>
+    body {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Courier New', monospace;
+      overflow: hidden;
+    }
+
+    html, body, #game-container {
+      height: 100%;
+      width: 100%;
+    }
+
+    #game-container {
+      display: flex;
+      flex-direction: column;
+      background: linear-gradient(135deg, #1a0a2e 0%, #0f051d 100%);
+      color: #e0e0e0;
+      overflow-y: auto;
+      padding: 20px;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: 2.5em;
+      color: #ff6b9d;
+      text-shadow: 0 0 10px rgba(255, 107, 157, 0.5);
+    }
+
+    .game-stats {
+      display: flex;
+      justify-content: center;
+      gap: 30px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .stat {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 10px 20px;
+      border-radius: 8px;
+      border: 2px solid #4ecdc4;
+    }
+
+    .stat-label {
+      font-size: 0.8em;
+      color: #4ecdc4;
+    }
+
+    .stat-value {
+      font-size: 1.5em;
+      font-weight: bold;
+      color: #fff;
+    }
+
+    .battle-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .enemy-section {
+      background: rgba(255, 59, 59, 0.2);
+      border: 3px solid #ff3b3b;
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      position: relative;
+    }
+
+    .enemy-visual {
+      font-size: 6em;
+      margin: 20px 0;
+      animation: enemyIdle 2s ease-in-out infinite;
+    }
+
+    @keyframes enemyIdle {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-10px); }
+    }
+
+    @keyframes enemyAttack {
+      0% { transform: translateY(0) scale(1); }
+      25% { transform: translateY(-20px) scale(1.2); }
+      50% { transform: translateY(0) scale(1.1) rotate(-5deg); }
+      75% { transform: translateY(0) scale(1.1) rotate(5deg); }
+      100% { transform: translateY(0) scale(1); }
+    }
+
+    @keyframes enemyHurt {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-15px); filter: brightness(2); }
+      50% { transform: translateX(15px); filter: brightness(2); }
+      75% { transform: translateX(-10px); filter: brightness(2); }
+    }
+
+    .enemy-name {
+      font-size: 1.8em;
+      margin-bottom: 10px;
+      color: #ff6b6b;
+    }
+
+    .health-bar {
+      background: rgba(0, 0, 0, 0.3);
+      height: 30px;
+      border-radius: 15px;
+      overflow: hidden;
+      margin-bottom: 10px;
+    }
+
+    .health-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #ff3b3b, #ff6b9d);
+      transition: width 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+    }
+
+    .enemy-intent {
+      font-size: 1.2em;
+      color: #ffd93d;
+    }
+
+    .player-section {
+      background: rgba(78, 205, 196, 0.2);
+      border: 3px solid #4ecdc4;
+      border-radius: 12px;
+      padding: 20px;
+      position: relative;
+    }
+
+    .player-visual {
+      font-size: 5em;
+      text-align: center;
+      margin: 10px 0;
+      animation: playerIdle 3s ease-in-out infinite;
+    }
+
+    @keyframes playerIdle {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-5px); }
+    }
+
+    @keyframes playerAttack {
+      0% { transform: translateX(0) scale(1); }
+      30% { transform: translateX(20px) scale(1.1); }
+      50% { transform: translateX(20px) scale(1.2) rotate(10deg); }
+      70% { transform: translateX(20px) scale(1.1); }
+      100% { transform: translateX(0) scale(1); }
+    }
+
+    @keyframes playerDefend {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.15); filter: brightness(1.5); }
+      100% { transform: scale(1); }
+    }
+
+    @keyframes playerHurt {
+      0%, 100% { transform: translateX(0); filter: brightness(1); }
+      25% { transform: translateX(10px); filter: brightness(0.5) hue-rotate(320deg); }
+      50% { transform: translateX(-10px); filter: brightness(0.5) hue-rotate(320deg); }
+      75% { transform: translateX(5px); filter: brightness(0.5) hue-rotate(320deg); }
+    }
+
+    .damage-number {
+      position: absolute;
+      font-size: 2em;
+      font-weight: bold;
+      animation: damageFloat 1s ease-out forwards;
+      pointer-events: none;
+      z-index: 100;
+    }
+
+    @keyframes damageFloat {
+      0% { opacity: 1; transform: translateY(0); }
+      100% { opacity: 0; transform: translateY(-60px); }
+    }
+
+    .player-stats {
+      display: flex;
+      justify-content: space-around;
+      margin-bottom: 15px;
+    }
+
+    .hand {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+      min-height: 140px;
+    }
+
+    .card {
+      background: linear-gradient(135deg, #2d1b3d, #1a0f2e);
+      border: 2px solid #8b5cf6;
+      border-radius: 8px;
+      padding: 12px;
+      width: 120px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+
+    .card:hover {
+      transform: translateY(-5px);
+      border-color: #ffd93d;
+      box-shadow: 0 5px 15px rgba(255, 217, 61, 0.4);
+    }
+
+    .card.disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .card.disabled:hover {
+      transform: none;
+      box-shadow: none;
+    }
+
+    .card-name {
+      font-weight: bold;
+      color: #ffd93d;
+      margin-bottom: 5px;
+      font-size: 0.9em;
+    }
+
+    .card-cost {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      background: #8b5cf6;
+      color: white;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 0.9em;
+    }
+
+    .card-description {
+      font-size: 0.75em;
+      color: #e0e0e0;
+      line-height: 1.4;
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin-top: 15px;
+    }
+
+    .btn {
+      background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 1em;
+      font-weight: bold;
+      transition: all 0.2s ease;
+    }
+
+    .btn:hover {
+      background: linear-gradient(135deg, #7c3aed, #5b21b6);
+      transform: scale(1.05);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn:disabled:hover {
+      transform: none;
+    }
+
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .modal-content {
+      background: linear-gradient(135deg, #1a0a2e, #0f051d);
+      border: 3px solid #8b5cf6;
+      border-radius: 12px;
+      padding: 30px;
+      max-width: 500px;
+      text-align: center;
+    }
+
+    .modal-title {
+      font-size: 2em;
+      margin-bottom: 20px;
+      color: #ffd93d;
+    }
+
+    .card-rewards {
+      display: flex;
+      gap: 15px;
+      justify-content: center;
+      margin: 20px 0;
+      flex-wrap: wrap;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .combat-log {
+      margin-top: 10px;
+      padding: 10px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 8px;
+      min-height: 60px;
+      max-height: 80px;
+      overflow-y: auto;
+    }
+
+    .log-entry {
+      font-size: 0.85em;
+      margin: 3px 0;
+      color: #b0b0b0;
+    }
+
+    .log-entry.damage {
+      color: #ff6b6b;
+    }
+
+    .log-entry.heal {
+      color: #4ecdc4;
+    }
+
+    .history-section {
+      margin-top: 30px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 2px solid #4ecdc4;
+      border-radius: 12px;
+      padding: 20px;
+      max-width: 1200px;
+      margin-left: auto;
+      margin-right: auto;
+      width: 100%;
+    }
+
+    .history-title {
+      font-size: 1.5em;
+      color: #4ecdc4;
+      margin-bottom: 15px;
+      text-align: center;
+    }
+
+    .history-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .history-item {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 12px;
+      border-radius: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .loading {
+      text-align: center;
+      color: #4ecdc4;
+      font-size: 1.2em;
+    }
+  </style>
+  <style>@view-transition { navigation: auto; }</style>
+  <script src="https://cdn.tailwindcss.com" type="text/javascript"></script>
+ </head>
+ <body>
+  <div id="game-container">
+   <div class="header">
+    <h1 id="game-title">Deck Builder Roguelike</h1>
+   </div>
+   <div class="game-stats">
+    <div class="stat">
+     <div class="stat-label">
+      Floor
+     </div>
+     <div class="stat-value" id="floor-display">
+      1
+     </div>
+    </div>
+    <div class="stat">
+     <div class="stat-label">
+      Energy
+     </div>
+     <div class="stat-value" id="energy-display">
+      3
+     </div>
+    </div>
+    <div class="stat">
+     <div class="stat-label">
+      Deck
+     </div>
+     <div class="stat-value" id="deck-count">
+      0
+     </div>
+    </div>
+   </div>
+   <div class="battle-area" id="battle-area">
+    <div class="enemy-section">
+     <div class="enemy-name" id="enemy-name">
+      Enemy
+     </div>
+     <div class="enemy-visual" id="enemy-visual">
+      👹
+     </div>
+     <div class="health-bar">
+      <div class="health-fill" id="enemy-health-bar"><span id="enemy-health-text">0 / 0</span>
+      </div>
+     </div>
+     <div class="enemy-intent" id="enemy-intent">
+      Preparing...
+     </div>
+     <div id="enemy-burn" style="font-size: 1.2em; color: #ff6b00; margin-top: 10px;"></div>
+    </div>
+    <div class="player-section">
+     <div class="player-visual" id="player-visual">
+      🧙‍♂️
+     </div>
+     <div class="player-stats">
+      <div class="stat">
+       <div class="stat-label">
+        Health
+       </div>
+       <div class="stat-value" id="player-health">
+        80
+       </div>
+      </div>
+      <div class="stat">
+       <div class="stat-label">
+        Energy
+       </div>
+       <div class="stat-value" id="player-energy">
+        3
+       </div>
+      </div>
+      <div class="stat">
+       <div class="stat-label">
+        Block
+       </div>
+       <div class="stat-value" id="player-block">
+        0
+       </div>
+      </div>
+     </div>
+     <div class="hand" id="hand"></div>
+     <div class="action-buttons"><button class="btn" id="draw-cards-btn">Draw 2 Cards (1 Energy)</button> <button class="btn" id="end-turn-btn">End Turn</button> <button class="btn" id="view-deck-btn">View Deck</button>
+     </div>
+     <div class="combat-log" id="combat-log"></div>
+    </div>
+   </div>
+   <div class="history-section">
+    <div class="history-title">
+     Run History
+    </div>
+    <div class="history-list" id="history-list">
+     <div class="loading">
+      Loading history...
+     </div>
+    </div>
+   </div>
+   <div id="reward-modal" class="modal hidden">
+    <div class="modal-content">
+     <div class="modal-title">
+      Victory!
+     </div>
+     <p id="reward-text">Choose a card to add to your deck:</p>
+     <div class="card-rewards" id="card-rewards"></div>
+    </div>
+   </div>
+   <div id="game-over-modal" class="modal hidden">
+    <div class="modal-content">
+     <div class="modal-title" id="game-over-title">
+      Defeat
+     </div>
+     <p id="game-over-text">You were defeated on floor 1</p><button class="btn" id="restart-btn">Start New Run</button>
+    </div>
+   </div>
+   <div id="deck-modal" class="modal hidden">
+    <div class="modal-content" style="max-width: 800px;">
+     <div class="modal-title">
+      Your Deck
+     </div>
+     <p style="color: #4ecdc4; margin-bottom: 20px;">Total Cards: <span id="deck-total">0</span></p>
+     <div class="card-rewards" id="deck-display" style="max-height: 400px; overflow-y: auto;"></div><button class="btn" id="close-deck-btn" style="margin-top: 20px;">Close</button>
+    </div>
+   </div>
+   <div id="boss-modifier-modal" class="modal hidden">
+    <div class="modal-content">
+     <div class="modal-title">
+      ⚠️ Boss Floor!
+     </div>
+     <p style="font-size: 1.3em; color: #ff6b6b; margin: 20px 0;"><strong id="modifier-name"></strong></p>
+     <p style="font-size: 1.1em; color: #e0e0e0; margin-bottom: 30px;" id="modifier-description"></p><button class="btn" id="boss-continue-btn">Continue to Battle</button>
+    </div>
+   </div>
+  </div>
+  <script>
+    const defaultConfig = {
+      game_title: "Deck Builder Roguelike",
+      victory_message: "Victory! Choose a card to add to your deck:",
+      defeat_message: "Defeat"
+    };
+
+    let config = { ...defaultConfig };
+    let runHistory = [];
+
+    const CARD_LIBRARY = [
+      { name: "Strike", cost: 1, damage: 6, description: "Deal 6 damage" },
+      { name: "Defend", cost: 1, block: 5, description: "Gain 5 block" },
+      { name: "Bash", cost: 2, damage: 8, description: "Deal 8 damage" },
+      { name: "Heavy Strike", cost: 2, damage: 12, description: "Deal 12 damage" },
+      { name: "Iron Wall", cost: 2, block: 9, description: "Gain 9 block" },
+      { name: "Twin Strike", cost: 1, damage: 3, hits: 2, description: "Deal 3 damage twice" },
+      { name: "Cleave", cost: 1, damage: 10, description: "Deal 10 damage" },
+      { name: "Armored Strike", cost: 2, damage: 8, block: 4, description: "Deal 8 damage. Gain 4 block" },
+      { name: "Surge", cost: 0, energy: 2, description: "Gain 2 energy" },
+      { name: "Fireball", cost: 2, damage: 8, burn: 3, description: "Deal 8 damage. Apply 3 burn 🔥" },
+      { name: "Healing Light", cost: 2, heal: 12, description: "Heal 12 HP ✨" },
+      { name: "Obliterate", cost: 4, damage: 30, description: "Deal 30 massive damage 💥" },
+      { name: "Risky Strike", cost: 1, damage: 16, chance: 0.5, description: "50% chance to deal 16 damage ���" },
+      { name: "Execute", cost: 2, percentDamage: 0.25, description: "Deal 25% of enemy's current HP ⚔️" },
+      { name: "Backstab", cost: 2, damage: 15, conditional: "buff", description: "Deal 15 damage if enemy intends to buff 🗡️" },
+      { name: "Whirlwind", cost: 0, variableDamage: 5, description: "Deal 5 damage X times (costs all energy) 🌪️" },
+      { name: "Siphon", cost: 2, damage: 8, lifesteal: true, description: "Deal 8 damage. Heal for damage dealt 🩸" },
+      { name: "Dodge Roll", cost: 1, block: 4, draw: 1, description: "Gain 4 block. Draw 1 card 💨" },
+      { name: "Chain Lightning", cost: 2, damage: 6, chainBonus: 3, description: "Deal 6 damage. +3 per attack played this turn ⚡" },
+      { name: "Glass Cannon", cost: 1, damage: 12, selfDamage: 4, description: "Deal 12 damage. Lose 4 HP 💔" }
+    ];
+
+    const ENEMY_TYPES = [
+      { name: "Goblin Scout", hp: 20, damage: 5, emoji: "👺", 
+        moves: [
+          { type: "attack", value: 5, name: "Stab" },
+          { type: "attack", value: 3, hits: 2, name: "Double Strike" },
+          { type: "attack", value: 7, name: "Power Strike" }
+        ]
+      },
+      { name: "Bandit", hp: 25, damage: 7, emoji: "🥷",
+        moves: [
+          { type: "attack", value: 7, name: "Slash" },
+          { type: "attack", value: 10, name: "Heavy Blow" },
+          { type: "attack", value: 5, hits: 2, name: "Quick Strikes" }
+        ]
+      },
+      { name: "Dark Warrior", hp: 35, damage: 9, emoji: "⚔️",
+        moves: [
+          { type: "attack", value: 9, name: "Sword Strike" },
+          { type: "attack", value: 5, hits: 2, name: "Flurry" },
+          { type: "buff", value: 3, name: "Power Up" }
+        ]
+      },
+      { name: "Elite Guard", hp: 45, damage: 11, emoji: "🛡️",
+        moves: [
+          { type: "attack", value: 11, name: "Shield Bash" },
+          { type: "attack", value: 15, name: "Execute" },
+          { type: "buff", value: 3, name: "Battle Rage" }
+        ]
+      },
+      { name: "Shadow Beast", hp: 55, damage: 13, emoji: "🐉",
+        moves: [
+          { type: "attack", value: 13, name: "Claw Swipe" },
+          { type: "attack", value: 8, hits: 2, name: "Bite Fury" },
+          { type: "buff", value: 4, name: "Roar" },
+          { type: "attack", value: 20, name: "Breath Attack" }
+        ]
+      },
+      { name: "Frost Giant", hp: 70, damage: 15, emoji: "🧊",
+        moves: [
+          { type: "attack", value: 15, name: "Ice Hammer" },
+          { type: "attack", value: 10, hits: 2, name: "Frozen Strikes" },
+          { type: "buff", value: 5, name: "Glacial Rage" },
+          { type: "attack", value: 25, name: "Avalanche" }
+        ]
+      },
+      { name: "Demon Lord", hp: 85, damage: 18, emoji: "😈",
+        moves: [
+          { type: "attack", value: 18, name: "Hellfire Slash" },
+          { type: "attack", value: 12, hits: 3, name: "Triple Torment" },
+          { type: "buff", value: 6, name: "Demonic Power" },
+          { type: "attack", value: 30, name: "Soul Reaver" }
+        ]
+      },
+      { name: "Ancient Dragon", hp: 100, damage: 20, emoji: "🐲",
+        moves: [
+          { type: "attack", value: 20, name: "Dragon Bite" },
+          { type: "attack", value: 15, hits: 2, name: "Wing Buffet" },
+          { type: "buff", value: 7, name: "Ancient Fury" },
+          { type: "attack", value: 35, name: "Inferno Breath" },
+          { type: "attack", value: 10, hits: 4, name: "Claw Frenzy" }
+        ]
+      },
+      { name: "Void Titan", hp: 120, damage: 22, emoji: "💀",
+        moves: [
+          { type: "attack", value: 22, name: "Void Strike" },
+          { type: "attack", value: 16, hits: 3, name: "Dark Barrage" },
+          { type: "buff", value: 8, name: "Cosmic Wrath" },
+          { type: "attack", value: 40, name: "Oblivion Beam" },
+          { type: "attack", value: 12, hits: 5, name: "Annihilation" }
+        ]
+      },
+      { name: "Eldritch Horror", hp: 150, damage: 25, emoji: "👁️",
+        moves: [
+          { type: "attack", value: 25, name: "Tentacle Slam" },
+          { type: "attack", value: 18, hits: 4, name: "Maddening Strikes" },
+          { type: "buff", value: 10, name: "Eldritch Power" },
+          { type: "attack", value: 45, name: "Reality Break" },
+          { type: "attack", value: 15, hits: 6, name: "Chaos Storm" }
+        ]
+      }
+    ];
+
+    let gameState = {
+      floor: 1,
+      playerHealth: 80,
+      playerMaxHealth: 80,
+      playerBlock: 0,
+      energy: 3,
+      maxEnergy: 3,
+      deck: [],
+      hand: [],
+      drawPile: [],
+      discardPile: [],
+      enemy: null,
+      enemyBurn: 0,
+      enemyBlock: 0,
+      enemyStrength: 0,
+      enemyNextMove: null,
+      combatLog: [],
+      bossModifier: null,
+      playerDamageMultiplier: 1.0,
+      blockingDisabled: false,
+      attacksPlayedThisTurn: 0,
+      totalDamageDealt: 0
+    };
+
+    function initializeGame() {
+      gameState.floor = 1;
+      gameState.playerHealth = 80;
+      gameState.playerMaxHealth = 80;
+      gameState.playerBlock = 0;
+      gameState.energy = 3;
+      gameState.maxEnergy = 3;
+      gameState.deck = [
+        ...Array(5).fill(null).map(() => ({ ...CARD_LIBRARY[0], id: Math.random() })),
+        ...Array(5).fill(null).map(() => ({ ...CARD_LIBRARY[1], id: Math.random() }))
+      ];
+      gameState.combatLog = [];
+      startNewFloor();
+    }
+
+    function startNewFloor() {
+      const enemyIndex = Math.min(Math.floor((gameState.floor - 1) / 3), ENEMY_TYPES.length - 1);
+      const enemyTemplate = ENEMY_TYPES[enemyIndex];
+      
+      gameState.enemy = {
+        name: enemyTemplate.name,
+        hp: enemyTemplate.hp + (gameState.floor - 1) * 2,
+        maxHp: enemyTemplate.hp + (gameState.floor - 1) * 2,
+        damage: enemyTemplate.damage + Math.floor((gameState.floor - 1) / 3),
+        emoji: enemyTemplate.emoji,
+        moves: enemyTemplate.moves
+      };
+
+      // Every 3rd floor (3, 6, 9, etc.) gets a random buff
+      gameState.bossModifier = null;
+      if (gameState.floor % 3 === 0) {
+        const modifiers = [
+          { 
+            name: "Fortified", 
+            effect: "2x HP", 
+            description: "This boss has twice the normal health! Prepare for a long battle.",
+            apply: () => {
+              gameState.enemy.hp *= 2;
+              gameState.enemy.maxHp *= 2;
+            }
+          },
+          { 
+            name: "Enraged", 
+            effect: "2x Damage", 
+            description: "This boss deals double damage with every attack! Defend carefully.",
+            apply: () => {
+              gameState.enemy.damage *= 2;
+            }
+          },
+          { 
+            name: "Draining", 
+            effect: "2 less max energy", 
+            description: "Your maximum energy is reduced by 2 for this fight. Use your energy wisely!",
+            apply: () => {
+              gameState.maxEnergy = Math.max(1, gameState.maxEnergy - 2);
+              gameState.energy = gameState.maxEnergy;
+            }
+          },
+          { 
+            name: "Armored", 
+            effect: "Player deals 50% damage", 
+            description: "This boss has heavy armor! All your damage is reduced by 50%.",
+            apply: () => {
+              gameState.playerDamageMultiplier = 0.5;
+            }
+          },
+          { 
+            name: "Shielded", 
+            effect: "No blocking allowed", 
+            description: "A mystical field prevents you from blocking! All block cards are useless.",
+            apply: () => {
+              gameState.blockingDisabled = true;
+            }
+          }
+        ];
+        
+        const modifier = modifiers[Math.floor(Math.random() * modifiers.length)];
+        gameState.bossModifier = modifier;
+        modifier.apply();
+        
+        gameState.enemy.name = `${gameState.enemy.name} (${modifier.name})`;
+        addLogEntry(`⚠️ Boss Modifier: ${modifier.effect}!`, 'damage');
+        
+        // Show boss modifier explanation modal
+        showBossModifierModal(modifier);
+      } else {
+        // Reset modifiers for non-boss floors
+        gameState.playerDamageMultiplier = 1.0;
+        gameState.blockingDisabled = false;
+        if (gameState.floor % 3 === 1) {
+          gameState.maxEnergy = 3 + Math.floor((gameState.floor - 1) / 6);
+        }
+      }
+
+      gameState.playerBlock = 0;
+      gameState.enemyBurn = 0;
+      gameState.enemyBlock = 0;
+      gameState.enemyStrength = 0;
+      gameState.attacksPlayedThisTurn = 0;
+      gameState.totalDamageDealt = 0;
+      gameState.drawPile = [...gameState.deck].sort(() => Math.random() - 0.5);
+      gameState.hand = [];
+      gameState.discardPile = [];
+      gameState.energy = gameState.maxEnergy;
+      gameState.combatLog = [];
+
+      selectEnemyMove();
+      updateUI();
+      
+      // Only draw cards and show initial log if not a boss floor (modal will handle it)
+      if (gameState.floor % 3 !== 0) {
+        drawCards(5);
+        addLogEntry(`Floor ${gameState.floor}: ${gameState.enemy.name} appears!`);
+        addLogEntry(`Starting hand: 5 cards drawn`);
+      }
+    }
+
+    function showBossModifierModal(modifier) {
+      const modal = document.getElementById('boss-modifier-modal');
+      document.getElementById('modifier-name').textContent = modifier.name;
+      document.getElementById('modifier-description').textContent = modifier.description;
+      modal.classList.remove('hidden');
+    }
+
+    function selectEnemyMove() {
+      if (!gameState.enemy || !gameState.enemy.moves) return;
+      const moves = gameState.enemy.moves;
+      gameState.enemyNextMove = moves[Math.floor(Math.random() * moves.length)];
+    }
+
+    function drawCards(count) {
+      for (let i = 0; i < count; i++) {
+        if (gameState.drawPile.length === 0) {
+          gameState.drawPile = [...gameState.discardPile].sort(() => Math.random() - 0.5);
+          gameState.discardPile = [];
+        }
+        if (gameState.drawPile.length > 0) {
+          gameState.hand.push(gameState.drawPile.pop());
+        }
+      }
+      updateUI();
+    }
+
+    function playCard(card) {
+      // Whirlwind special handling - uses all energy
+      if (card.variableDamage) {
+        if (gameState.energy === 0) return;
+        
+        const energyToSpend = gameState.energy;
+        gameState.energy = 0;
+        gameState.hand = gameState.hand.filter(c => c.id !== card.id);
+        gameState.discardPile.push(card);
+        
+        const playerVisual = document.getElementById('player-visual');
+        const enemyVisual = document.getElementById('enemy-visual');
+        
+        playerVisual.style.animation = 'none';
+        setTimeout(() => {
+          playerVisual.style.animation = 'playerAttack 0.5s ease-out';
+        }, 10);
+        
+        setTimeout(() => {
+          for (let i = 0; i < energyToSpend; i++) {
+            let damageAmount = Math.floor(card.variableDamage * gameState.playerDamageMultiplier);
+            gameState.enemy.hp -= damageAmount;
+            gameState.totalDamageDealt += damageAmount;
+          }
+          
+          const totalDamage = Math.floor(card.variableDamage * gameState.playerDamageMultiplier) * energyToSpend;
+          addLogEntry(`Whirlwind dealt ${totalDamage} damage (${energyToSpend}x)`, 'damage');
+          showDamageNumber(`-${totalDamage}`, 'enemy');
+          
+          enemyVisual.style.animation = 'none';
+          setTimeout(() => {
+            enemyVisual.style.animation = 'enemyHurt 0.4s ease-out';
+          }, 10);
+          
+          gameState.attacksPlayedThisTurn++;
+          updateUI();
+          
+          if (gameState.enemy.hp <= 0) {
+            setTimeout(() => victory(), 300);
+          } else {
+            setTimeout(() => {
+              playerVisual.style.animation = 'playerIdle 3s ease-in-out infinite';
+              enemyVisual.style.animation = 'enemyIdle 2s ease-in-out infinite';
+            }, 500);
+          }
+        }, 300);
+        
+        return;
+      }
+      
+      if (card.cost > gameState.energy) return;
+
+      gameState.energy -= card.cost;
+      gameState.hand = gameState.hand.filter(c => c.id !== card.id);
+      gameState.discardPile.push(card);
+
+      if (card.damage || card.percentDamage) {
+        // Check for conditional attacks (Backstab)
+        if (card.conditional === "buff" && gameState.enemyNextMove && gameState.enemyNextMove.type !== "buff") {
+          addLogEntry(`${card.name} failed - enemy not buffing!`, 'heal');
+          updateUI();
+          return;
+        }
+        
+        // Check for chance-based attacks
+        const chance = card.chance !== undefined ? card.chance : 1.0;
+        const attackHits = Math.random() < chance;
+        
+        const hits = card.hits || 1;
+        const playerVisual = document.getElementById('player-visual');
+        const enemyVisual = document.getElementById('enemy-visual');
+        
+        playerVisual.style.animation = 'none';
+        setTimeout(() => {
+          playerVisual.style.animation = 'playerAttack 0.5s ease-out';
+        }, 10);
+        
+        setTimeout(() => {
+          if (attackHits) {
+            for (let i = 0; i < hits; i++) {
+              let damageAmount = card.damage || 0;
+              
+              // Calculate percentage-based damage
+              if (card.percentDamage) {
+                damageAmount = Math.floor(gameState.enemy.hp * card.percentDamage);
+              }
+              
+              // Chain Lightning bonus
+              if (card.chainBonus) {
+                damageAmount += card.chainBonus * gameState.attacksPlayedThisTurn;
+              }
+              
+              // Apply player damage multiplier (for Armored modifier)
+              damageAmount = Math.floor(damageAmount * gameState.playerDamageMultiplier);
+              
+              gameState.enemy.hp -= damageAmount;
+              gameState.totalDamageDealt += damageAmount;
+              
+              // Lifesteal (Siphon)
+              if (card.lifesteal) {
+                const healAmount = Math.min(damageAmount, gameState.playerMaxHealth - gameState.playerHealth);
+                gameState.playerHealth += healAmount;
+                addLogEntry(`Siphoned ${healAmount} HP 🩸`, 'heal');
+                showDamageNumber(`+${healAmount}`, 'player');
+              }
+              
+              addLogEntry(`Dealt ${damageAmount} damage to ${gameState.enemy.name}`, 'damage');
+              showDamageNumber(`-${damageAmount}`, 'enemy');
+            }
+            
+            enemyVisual.style.animation = 'none';
+            setTimeout(() => {
+              enemyVisual.style.animation = 'enemyHurt 0.4s ease-out';
+            }, 10);
+          } else {
+            addLogEntry(`${card.name} missed! 💨`, 'heal');
+            showDamageNumber('MISS', 'enemy');
+          }
+          
+          gameState.attacksPlayedThisTurn++;
+          updateUI();
+          
+          if (gameState.enemy.hp <= 0) {
+            setTimeout(() => victory(), 300);
+          } else {
+            setTimeout(() => {
+              playerVisual.style.animation = 'playerIdle 3s ease-in-out infinite';
+              enemyVisual.style.animation = 'enemyIdle 2s ease-in-out infinite';
+            }, 500);
+          }
+        }, 300);
+      }
+
+      if (card.block) {
+        if (gameState.blockingDisabled) {
+          addLogEntry(`❌ Blocking is disabled!`, 'damage');
+          showDamageNumber('BLOCKED!', 'player');
+        } else {
+          gameState.playerBlock += card.block;
+          addLogEntry(`Gained ${card.block} block`, 'heal');
+          
+          const playerVisual = document.getElementById('player-visual');
+          playerVisual.style.animation = 'none';
+          setTimeout(() => {
+            playerVisual.style.animation = 'playerDefend 0.5s ease-out';
+            setTimeout(() => {
+              playerVisual.style.animation = 'playerIdle 3s ease-in-out infinite';
+            }, 500);
+          }, 10);
+        }
+        
+        updateUI();
+      }
+
+      if (card.burn) {
+        gameState.enemyBurn += card.burn;
+        addLogEntry(`Applied ${card.burn} burn 🔥`, 'damage');
+        updateUI();
+      }
+
+      if (card.heal) {
+        const healAmount = Math.min(card.heal, gameState.playerMaxHealth - gameState.playerHealth);
+        gameState.playerHealth += healAmount;
+        addLogEntry(`Healed ${healAmount} HP ✨`, 'heal');
+        showDamageNumber(`+${healAmount}`, 'player');
+        
+        const playerVisual = document.getElementById('player-visual');
+        playerVisual.style.animation = 'none';
+        setTimeout(() => {
+          playerVisual.style.animation = 'playerDefend 0.5s ease-out';
+          setTimeout(() => {
+            playerVisual.style.animation = 'playerIdle 3s ease-in-out infinite';
+          }, 500);
+        }, 10);
+        
+        updateUI();
+      }
+
+      if (card.energy) {
+        gameState.energy += card.energy;
+        addLogEntry(`Gained ${card.energy} energy`, 'heal');
+        updateUI();
+      }
+      
+      // Glass Cannon self-damage
+      if (card.selfDamage) {
+        gameState.playerHealth -= card.selfDamage;
+        addLogEntry(`Took ${card.selfDamage} recoil damage 💔`, 'damage');
+        showDamageNumber(`-${card.selfDamage}`, 'player');
+        
+        const playerVisual = document.getElementById('player-visual');
+        playerVisual.style.animation = 'none';
+        setTimeout(() => {
+          playerVisual.style.animation = 'playerHurt 0.4s ease-out';
+          setTimeout(() => {
+            playerVisual.style.animation = 'playerIdle 3s ease-in-out infinite';
+          }, 500);
+        }, 10);
+        
+        updateUI();
+        
+        if (gameState.playerHealth <= 0) {
+          setTimeout(() => defeat(), 500);
+          return;
+        }
+      }
+      
+      // Dodge Roll draw card
+      if (card.draw) {
+        drawCards(card.draw);
+        addLogEntry(`Drew ${card.draw} card`, 'heal');
+      }
+
+      if (!card.damage && !card.percentDamage && !card.block && !card.heal && !card.variableDamage) {
+        updateUI();
+      }
+    }
+
+    function endTurn() {
+      const enemyVisual = document.getElementById('enemy-visual');
+      const playerVisual = document.getElementById('player-visual');
+      
+      enemyVisual.style.animation = 'none';
+      setTimeout(() => {
+        enemyVisual.style.animation = 'enemyAttack 0.6s ease-out';
+      }, 10);
+      
+      setTimeout(() => {
+        // Apply burn damage first
+        if (gameState.enemyBurn > 0) {
+          const burnDamage = Math.max(0, gameState.enemyBurn - gameState.enemyBlock);
+          gameState.enemy.hp -= burnDamage;
+          gameState.enemyBlock = Math.max(0, gameState.enemyBlock - gameState.enemyBurn);
+          addLogEntry(`Burn dealt ${burnDamage} damage 🔥`, 'damage');
+          showDamageNumber(`-${burnDamage}`, 'enemy');
+          gameState.enemyBurn = Math.max(0, gameState.enemyBurn - 1);
+          
+          if (gameState.enemy.hp <= 0) {
+            updateUI();
+            setTimeout(() => victory(), 500);
+            return;
+          }
+        }
+        
+        // Execute enemy move
+        const move = gameState.enemyNextMove;
+        if (move) {
+          if (move.type === "attack") {
+            const hits = move.hits || 1;
+            let totalDamage = 0;
+            for (let i = 0; i < hits; i++) {
+              const attackValue = move.value + gameState.enemyStrength;
+              const damage = Math.max(0, attackValue - gameState.playerBlock);
+              totalDamage += damage;
+              gameState.playerBlock = Math.max(0, gameState.playerBlock - attackValue);
+            }
+            gameState.playerHealth -= totalDamage;
+            
+            if (totalDamage > 0) {
+              addLogEntry(`${gameState.enemy.name} used ${move.name} for ${totalDamage} damage`, 'damage');
+              showDamageNumber(`-${totalDamage}`, 'player');
+              
+              playerVisual.style.animation = 'none';
+              setTimeout(() => {
+                playerVisual.style.animation = 'playerHurt 0.4s ease-out';
+              }, 10);
+            } else {
+              addLogEntry(`${move.name} - Block absorbed all damage!`, 'heal');
+            }
+          } else if (move.type === "buff") {
+            gameState.enemyStrength += move.value;
+            addLogEntry(`${gameState.enemy.name} used ${move.name} - gained ${move.value} strength 💪`, 'heal');
+          }
+        }
+
+        updateUI();
+
+        if (gameState.playerHealth <= 0) {
+          setTimeout(() => defeat(), 500);
+          return;
+        }
+
+        setTimeout(() => {
+          enemyVisual.style.animation = 'enemyIdle 2s ease-in-out infinite';
+          playerVisual.style.animation = 'playerIdle 3s ease-in-out infinite';
+        }, 500);
+
+        // Select next move
+        selectEnemyMove();
+        
+        // Reset player block at start of new turn
+        gameState.playerBlock = 0;
+        gameState.attacksPlayedThisTurn = 0;
+        
+        // Energy carries over, add max energy to current
+        gameState.energy += gameState.maxEnergy;
+        addLogEntry(`New turn! Energy: ${gameState.energy}`, 'heal');
+        updateUI();
+      }, 400);
+    }
+    
+    function drawCardsAction() {
+      if (gameState.energy < 1) return;
+      gameState.energy -= 1;
+      drawCards(2);
+      addLogEntry('Drew 2 cards', 'heal');
+    }
+
+    function showDamageNumber(amount, target) {
+      const targetEl = target === 'enemy' 
+        ? document.querySelector('.enemy-section')
+        : document.querySelector('.player-section');
+      if (!targetEl) return;
+      
+      const damageEl = document.createElement('div');
+      damageEl.className = 'damage-number';
+      damageEl.textContent = amount;
+      damageEl.style.color = target === 'enemy' ? '#ff6b6b' : (amount.toString().startsWith('+') ? '#4ecdc4' : '#ffd93d');
+      damageEl.style.left = `${50 + (Math.random() - 0.5) * 40}%`;
+      damageEl.style.top = '30%';
+      
+      targetEl.appendChild(damageEl);
+      
+      setTimeout(() => {
+        damageEl.remove();
+      }, 1000);
+    }
+
+    function victory() {
+      const rewards = [];
+      for (let i = 0; i < 3; i++) {
+        const card = { ...CARD_LIBRARY[Math.floor(Math.random() * CARD_LIBRARY.length)], id: Math.random() };
+        rewards.push(card);
+      }
+
+      const rewardModal = document.getElementById('reward-modal');
+      const rewardText = document.getElementById('reward-text');
+      const cardRewards = document.getElementById('card-rewards');
+      
+      rewardText.textContent = config.victory_message || defaultConfig.victory_message;
+      cardRewards.innerHTML = '';
+
+      rewards.forEach(card => {
+        const cardEl = createCardElement(card);
+        cardEl.onclick = () => {
+          gameState.deck.push(card);
+          gameState.floor++;
+          
+          // Gain 1 max energy every 2 floors
+          if (gameState.floor % 2 === 1 && gameState.floor > 1) {
+            gameState.maxEnergy++;
+            addLogEntry(`Max energy increased to ${gameState.maxEnergy}!`, 'heal');
+          }
+          
+          rewardModal.classList.add('hidden');
+          startNewFloor();
+        };
+        cardRewards.appendChild(cardEl);
+      });
+
+      rewardModal.classList.remove('hidden');
+    }
+
+    async function defeat() {
+      const defeatModal = document.getElementById('game-over-modal');
+      const defeatTitle = document.getElementById('game-over-title');
+      const defeatText = document.getElementById('game-over-text');
+      
+      defeatTitle.textContent = config.defeat_message || defaultConfig.defeat_message;
+      defeatText.textContent = `You were defeated on floor ${gameState.floor}`;
+      defeatModal.classList.remove('hidden');
+
+      const runData = {
+        id: `run_${Date.now()}`,
+        run_number: runHistory.length + 1,
+        floor: gameState.floor,
+        max_floor: gameState.floor,
+        victories: gameState.floor - 1,
+        completed_at: new Date().toISOString()
+      };
+
+      if (window.dataSdk) {
+        const result = await window.dataSdk.create(runData);
+        if (!result.isOk) {
+          console.error("Failed to save run");
+        }
+      }
+    }
+
+    function createCardElement(card) {
+      const cardEl = document.createElement('div');
+      cardEl.className = 'card';
+      
+      // Whirlwind can be played with any energy
+      const canPlay = card.variableDamage ? gameState.energy > 0 : card.cost <= gameState.energy;
+      
+      if (!canPlay) {
+        cardEl.classList.add('disabled');
+      }
+      
+      const costDisplay = card.variableDamage ? 'X' : card.cost;
+      
+      cardEl.innerHTML = `
+        <div class="card-cost">${costDisplay}</div>
+        <div class="card-name">${card.name}</div>
+        <div class="card-description">${card.description}</div>
+      `;
+      
+      if (canPlay && !card.onclick) {
+        cardEl.onclick = () => playCard(card);
+      }
+      
+      return cardEl;
+    }
+
+    function updateUI() {
+      document.getElementById('floor-display').textContent = gameState.floor;
+      document.getElementById('energy-display').textContent = gameState.energy;
+      document.getElementById('player-energy').textContent = gameState.energy;
+      document.getElementById('deck-count').textContent = gameState.deck.length;
+      document.getElementById('player-health').textContent = gameState.playerHealth;
+      document.getElementById('player-block').textContent = gameState.playerBlock;
+      document.getElementById('game-title').textContent = config.game_title || defaultConfig.game_title;
+
+      if (gameState.enemy) {
+        document.getElementById('enemy-name').textContent = gameState.enemy.name;
+        document.getElementById('enemy-visual').textContent = gameState.enemy.emoji;
+        const healthPercent = (gameState.enemy.hp / gameState.enemy.maxHp) * 100;
+        document.getElementById('enemy-health-bar').style.width = `${healthPercent}%`;
+        document.getElementById('enemy-health-text').textContent = `${Math.max(0, gameState.enemy.hp)} / ${gameState.enemy.maxHp}`;
+        
+        
+        // Display next move intent
+        if (gameState.enemyNextMove) {
+          const move = gameState.enemyNextMove;
+          let intentText = `Next: ${move.name} - `;
+          if (move.type === "attack") {
+            const damage = move.value + gameState.enemyStrength;
+            const hits = move.hits || 1;
+            intentText += hits > 1 ? `${damage} damage x${hits}` : `${damage} damage`;
+          } else if (move.type === "buff") {
+            intentText += `Gain ${move.value} strength 💪`;
+          }
+          document.getElementById('enemy-intent').textContent = intentText;
+        }
+        
+        const burnEl = document.getElementById('enemy-burn');
+        let statusText = '';
+        if (gameState.enemyBurn > 0) {
+          statusText += `🔥 Burn: ${gameState.enemyBurn}`;
+        }
+        if (gameState.enemyStrength > 0) {
+          if (statusText) statusText += ' | ';
+          statusText += `💪 Strength: ${gameState.enemyStrength}`;
+        }
+        burnEl.textContent = statusText;
+      }
+
+      const handEl = document.getElementById('hand');
+      handEl.innerHTML = '';
+      gameState.hand.forEach(card => {
+        handEl.appendChild(createCardElement(card));
+      });
+    }
+
+    function addLogEntry(message, type = '') {
+      gameState.combatLog.push({ message, type });
+      if (gameState.combatLog.length > 5) {
+        gameState.combatLog.shift();
+      }
+      
+      const logEl = document.getElementById('combat-log');
+      logEl.innerHTML = gameState.combatLog
+        .map(entry => `<div class="log-entry ${entry.type}">${entry.message}</div>`)
+        .join('');
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function renderHistory() {
+      const historyList = document.getElementById('history-list');
+      
+      if (runHistory.length === 0) {
+        historyList.innerHTML = '<div class="loading">No runs yet. Start your first adventure!</div>';
+        return;
+      }
+
+      historyList.innerHTML = runHistory
+        .sort((a, b) => b.run_number - a.run_number)
+        .map(run => `
+          <div class="history-item">
+            <div>
+              <strong>Run #${run.run_number}</strong> - 
+              Floor ${run.max_floor} - 
+              ${run.victories} victories
+            </div>
+            <div style="color: #4ecdc4; font-size: 0.85em;">
+              ${new Date(run.completed_at).toLocaleDateString()}
+            </div>
+          </div>
+        `).join('');
+    }
+
+    const dataHandler = {
+      onDataChanged(data) {
+        runHistory = data;
+        renderHistory();
+      }
+    };
+
+    async function onConfigChange(newConfig) {
+      config = newConfig;
+      updateUI();
+    }
+
+    async function init() {
+      if (window.dataSdk) {
+        const initResult = await window.dataSdk.init(dataHandler);
+        if (!initResult.isOk) {
+          console.error("Failed to initialize data SDK");
+        }
+      }
+
+      if (window.elementSdk) {
+        window.elementSdk.init({
+          defaultConfig,
+          onConfigChange,
+          mapToCapabilities: (config) => ({
+            recolorables: [
+              {
+                get: () => config.background_color || "#1a0a2e",
+                set: (value) => {
+                  config.background_color = value;
+                  window.elementSdk.setConfig({ background_color: value });
+                }
+              },
+              {
+                get: () => config.card_color || "#2d1b3d",
+                set: (value) => {
+                  config.card_color = value;
+                  window.elementSdk.setConfig({ card_color: value });
+                }
+              },
+              {
+                get: () => config.text_color || "#e0e0e0",
+                set: (value) => {
+                  config.text_color = value;
+                  window.elementSdk.setConfig({ text_color: value });
+                }
+              },
+              {
+                get: () => config.accent_color || "#8b5cf6",
+                set: (value) => {
+                  config.accent_color = value;
+                  window.elementSdk.setConfig({ accent_color: value });
+                }
+              },
+              {
+                get: () => config.secondary_color || "#4ecdc4",
+                set: (value) => {
+                  config.secondary_color = value;
+                  window.elementSdk.setConfig({ secondary_color: value });
+                }
+              }
+            ],
+            borderables: [],
+            fontEditable: undefined,
+            fontSizeable: undefined
+          }),
+          mapToEditPanelValues: (config) => new Map([
+            ["game_title", config.game_title || defaultConfig.game_title],
+            ["victory_message", config.victory_message || defaultConfig.victory_message],
+            ["defeat_message", config.defeat_message || defaultConfig.defeat_message]
+          ])
+        });
+      }
+
+      document.getElementById('end-turn-btn').onclick = endTurn;
+      document.getElementById('draw-cards-btn').onclick = drawCardsAction;
+      document.getElementById('restart-btn').onclick = () => {
+        document.getElementById('game-over-modal').classList.add('hidden');
+        initializeGame();
+      };
+      document.getElementById('view-deck-btn').onclick = () => {
+        showDeckView();
+      };
+      document.getElementById('close-deck-btn').onclick = () => {
+        document.getElementById('deck-modal').classList.add('hidden');
+      };
+      document.getElementById('boss-continue-btn').onclick = () => {
+        document.getElementById('boss-modifier-modal').classList.add('hidden');
+        drawCards(5);
+        addLogEntry(`Floor ${gameState.floor}: ${gameState.enemy.name} appears!`);
+        addLogEntry(`Starting hand: 5 cards drawn`);
+      };
+
+      initializeGame();
+    }
+
+    function showDeckView() {
+      const deckModal = document.getElementById('deck-modal');
+      const deckDisplay = document.getElementById('deck-display');
+      const deckTotal = document.getElementById('deck-total');
+      
+      deckTotal.textContent = gameState.deck.length;
+      deckDisplay.innerHTML = '';
+      
+      // Count card occurrences
+      const cardCounts = {};
+      gameState.deck.forEach(card => {
+        const key = card.name;
+        cardCounts[key] = (cardCounts[key] || 0) + 1;
+      });
+      
+      // Display unique cards with counts
+      Object.keys(cardCounts).forEach(cardName => {
+        const card = gameState.deck.find(c => c.name === cardName);
+        const cardEl = document.createElement('div');
+        cardEl.className = 'card';
+        cardEl.style.cursor = 'default';
+        
+        const costDisplay = card.variableDamage ? 'X' : card.cost;
+        
+        cardEl.innerHTML = `
+          <div class="card-cost">${costDisplay}</div>
+          <div class="card-name">${card.name}</div>
+          <div class="card-description">${card.description}</div>
+          <div style="text-align: center; margin-top: 10px; color: #ffd93d; font-weight: bold;">x${cardCounts[cardName]}</div>
+        `;
+        
+        deckDisplay.appendChild(cardEl);
+      });
+      
+      deckModal.classList.remove('hidden');
+    }
+
+    init();
+  </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9cb6133a568cf019',t:'MTc3MDY2ODUwNy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
